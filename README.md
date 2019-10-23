@@ -1,13 +1,20 @@
-QUIC implementation for ns-3
+Integration of the BBR congestion control mechanism in the ns-3 QUIC module
 ================================
 
-## QUIC code base
-This repository contains in the `src/quic` and `src/applications` the code for the implementation of the QUIC protocol for ns-3.
+This repository is a fork of [signetlabdei](https://github.com/signetlabdei)'s [quic-ns-3](https://github.com/signetlabdei/quic-ns-3), and is intended to integrate the BBR congestion control mechanism implemented in [Reproduce-TCP-BBR-in-ns-3](https://github.com/Vivek-anand-jain/Reproduce-TCP-BBR-in-ns-3).
 
-The implementation is described in [this paper](https://arxiv.org/abs/1902.06121).
+The implementation of the quic module is described in [this paper](https://arxiv.org/abs/1902.06121), while the BBR implementation in the internet module is described in [this paper](https://dl.acm.org/citation.cfm?doid=3199902.3199911).
 
 Please use the issue tracker for bugs/questions.
 
+### Test
+
+```shell
+./waf configure --enable-examples
+./waf
+./waf --run "tcp-variants-comparison --tracing=true --transport_prot=TcpBbr"
+```
+produces `TcpVariantsComparison-*` data files
 
 The Network Simulator, Version 3
 ================================
