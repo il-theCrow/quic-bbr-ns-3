@@ -28,9 +28,25 @@
 #include "ns3/nstime.h"
 #include "ns3/tcp-option-sack.h"
 #include "ns3/packet.h"
+#include "ns3/data-rate.h"
+#include "ns3/tcp-socket-state.h"
 
 namespace ns3 {
 class Packet;
+
+struct RateSample
+{
+  DataRate      m_deliveryRate;   //!< The delivery rate sample
+  uint32_t      m_isAppLimited;   //!< Indicates whether the rate sample is application-limited
+  Time          m_interval;       //!< The length of the sampling interval
+  uint32_t      m_delivered {0};      //!< The amount of data marked as delivered over the sampling interval
+  uint32_t      m_priorDelivered {0}; //!< The delivered count of the most recent packet delivered
+  Time          m_priorTime;      //!< The delivered time of the most recent packet delivered
+  Time          m_sendElapsed;    //!< Send time interval calculated from the most recent packet delivered
+  Time          m_ackElapsed;     //!< ACK time interval calculated from the most recent packet delivered
+  uint32_t      m_packetLoss;
+  uint32_t      m_priorInFlight;
+};
 
 /**
  * \ingroup tcp
@@ -61,6 +77,10 @@ public:
   bool m_retrans       {false};      //!< Indicates if the segment is retransmitted
   Time m_lastSent      {Time::Min()};//!< Timestamp of the time at which the segment has been sent last time
   bool m_sacked        {false};      //!< Indicates if the segment has been SACKed
+  uint64_t m_delivered {0};          //!< Connection's delivered data at the time the packet was sent
+  Time m_deliveredTime {Seconds (0)};//!< Connection's delivered time at the time the packet was sent
+  Time m_firstSentTime {Seconds (0)};//!< Connection's first sent time at the time the packet was sent
+  bool m_isAppLimited  {false};      //!< Connection's app limited at the time the packet was sent
 };
 
 /**
@@ -406,6 +426,37 @@ public:
    */
   void ResetRenoSack ();
 
+  /**
+   * \brief Set the TcpSocketState (tcb)
+   */
+  void SetTcpSocketState (Ptr<TcpSocketState> tcb);
+
+  /**
+   * \brief Updates per packet variables required for rate sampling on each
+   * packet transmission
+   */
+  void UpdatePacketSent (SequenceNumber32 seq, uint32_t sz);
+
+  /**
+   * \brief Returns ptr to the rate sample
+   */
+  struct RateSample * GetRateSample ();
+
+  /**
+   * \brief Updates rate samples rate on arrival of each acknowledgement.
+   */
+  void UpdateRateSample (TcpTxItem *pps);
+
+  /**
+   * \brief Calculates delivery rate on arrival of each acknowledgement.
+   */
+  bool GenerateRateSample ();
+
+  /**
+   * \brief Checks if connection is app-limited upon each write from the application
+   */
+  void OnApplicationWrite ();
+
 private:
   friend std::ostream & operator<< (std::ostream & os, TcpTxBuffer const & tcpTxBuf);
 
@@ -616,6 +667,8 @@ private:
   uint32_t m_segmentSize {0}; //!< Segment size from TcpSocketBase
   bool     m_renoSack {false}; //!< Indicates if AddRenoSack was called
 
+  Ptr<TcpSocketState> m_tcb {nullptr};
+  struct RateSample   m_rs;
 };
 
 /**

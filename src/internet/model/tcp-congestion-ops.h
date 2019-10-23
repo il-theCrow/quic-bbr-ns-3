@@ -104,6 +104,29 @@ public:
   virtual void IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked) = 0;
 
   /**
+   * \brief Returns true when Congestion Control Algorithm implements CongControl
+   */
+  virtual bool HasCongControl () const
+  {
+    return false;
+  }
+
+  /**
+   * \brief Called when packets are delivered to update cwnd and pacing rate
+   *
+   * This function mimics the function cong_control in Linux. It is allowed to
+   * change directly cWnd and pacing rate.
+   *
+   * \param tcb internal congestion state
+   * \param rs count of segments acked
+   */
+  virtual void CongControl (Ptr<TcpSocketState> tcb, const struct RateSample *rs)
+  {
+    NS_UNUSED (tcb);
+    NS_UNUSED (rs);
+  }
+
+  /**
    * \brief Timing information on received ACK
    *
    * The function is called every time an ACK is received (only one time

@@ -95,7 +95,12 @@ TcpSocketState::TcpSocketState (const TcpSocketState &other)
     m_currentPacingRate (other.m_currentPacingRate),
     m_minRtt (other.m_minRtt),
     m_bytesInFlight (other.m_bytesInFlight),
-    m_lastRtt (other.m_lastRtt)
+    m_lastRtt (other.m_lastRtt),
+    m_delivered (other.m_delivered),
+    m_deliveredTime (other.m_deliveredTime),
+    m_firstSentTime (other.m_firstSentTime),
+    m_appLimited (other.m_appLimited),
+    m_txItemDelivered (other.m_txItemDelivered)
 {
 }
 

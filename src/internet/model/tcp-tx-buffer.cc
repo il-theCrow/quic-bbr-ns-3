@@ -189,6 +189,7 @@ TcpTxBuffer::Add (Ptr<Packet> p)
           NS_LOG_LOGIC ("Updated size=" << m_size << ", lastSeq=" <<
                         m_firstByteSeq + SequenceNumber32 (m_size));
         }
+      OnApplicationWrite ();
       return true;
     }
   NS_LOG_LOGIC ("Rejected. Not enough room to buffer packet.");
@@ -684,6 +685,8 @@ TcpTxBuffer::DiscardUpTo (const SequenceNumber32& seq)
                      "Item starts at " << item->m_startSeq <<
                      " while SND.UNA is " << m_firstByteSeq << " from " << *this);
 
+      UpdateRateSample (item);
+
       if (offset >= pktSize)
         { // This packet is behind the seqnum. Remove this packet from the buffer
           m_size -= pktSize;
@@ -803,6 +806,8 @@ TcpTxBuffer::Update (const TcpOptionSack::SackList &list)
                       (*item_it)->m_lost = false;
                       m_lostOut -= (*item_it)->m_packet->GetSize ();
                     }
+
+                  UpdateRateSample (*item_it);
 
                   (*item_it)->m_sacked = true;
                   m_sackedOut += (*item_it)->m_packet->GetSize ();
@@ -1406,6 +1411,118 @@ TcpTxBuffer::ConsistencyCheck () const
                  " stored lost: " << m_lostOut);
   NS_ASSERT_MSG (retrans == m_retrans, " Counted retrans: " << retrans <<
                  " stored retrans: " << m_retrans);
+}
+
+void
+TcpTxBuffer::SetTcpSocketState (Ptr<TcpSocketState> tcb)
+{
+  NS_LOG_FUNCTION (this);
+  m_tcb = tcb;
+}
+
+void
+TcpTxBuffer::UpdatePacketSent (SequenceNumber32 seq, uint32_t sz)
+{
+  NS_LOG_FUNCTION (this << seq << sz);
+
+  if (m_tcb == nullptr)
+    {
+      return;
+    }
+
+  if (m_tcb->m_bytesInFlight.Get () == 0)
+    {
+      m_tcb->m_firstSentTime = Simulator::Now ();
+      m_tcb->m_deliveredTime = Simulator::Now ();
+    }
+
+  TcpTxItem *item = GetTransmittedSegment (sz, seq);
+  item->m_firstSentTime = m_tcb->m_firstSentTime;
+  item->m_deliveredTime = m_tcb->m_deliveredTime;
+  item->m_isAppLimited  = (m_tcb->m_appLimited != 0);
+  item->m_delivered     = m_tcb->m_delivered;
+}
+
+struct RateSample *
+TcpTxBuffer::GetRateSample ()
+{
+  NS_LOG_FUNCTION (this);
+  return &m_rs;
+}
+
+void
+TcpTxBuffer::UpdateRateSample (TcpTxItem *item)
+{
+  NS_LOG_FUNCTION (this << item);
+
+  if (m_tcb == nullptr || item->m_deliveredTime == Time::Max ())
+    {
+      return;
+    }
+
+  m_tcb->m_delivered         += item->m_packet->GetSize ();;
+  m_tcb->m_deliveredTime      = Simulator::Now ();
+
+  if (item->m_delivered > m_rs.m_priorDelivered)
+    {
+      m_rs.m_priorDelivered   = item->m_delivered;
+      m_rs.m_priorTime        = item->m_deliveredTime;
+      m_rs.m_isAppLimited     = item->m_isAppLimited;
+      m_rs.m_sendElapsed      = item->m_lastSent - item->m_firstSentTime;
+      m_rs.m_ackElapsed       = m_tcb->m_deliveredTime - item->m_deliveredTime;
+      m_tcb->m_firstSentTime  = item->m_lastSent;
+    }
+
+  item->m_deliveredTime = Time::Max ();
+  m_tcb->m_txItemDelivered = item->m_delivered;
+}
+
+bool
+TcpTxBuffer::GenerateRateSample ()
+{
+  NS_LOG_FUNCTION (this);
+
+  if (m_tcb == nullptr)
+    {
+      return false;
+    }
+
+  if (m_tcb->m_appLimited && m_tcb->m_delivered > m_tcb->m_appLimited)
+    {
+      m_tcb->m_appLimited = 0;
+    }
+
+  if (m_rs.m_priorTime == Seconds (0))
+    {
+      return false;
+    }
+
+  m_rs.m_interval = std::max (m_rs.m_sendElapsed, m_rs.m_ackElapsed);
+
+  m_rs.m_delivered = m_tcb->m_delivered - m_rs.m_priorDelivered;
+
+  if (m_rs.m_interval < m_tcb->m_minRtt)
+    {
+      m_rs.m_interval = Seconds (0);
+      return false;
+    }
+
+  if (m_rs.m_interval != Seconds (0))
+    {
+      m_rs.m_deliveryRate = DataRate (m_rs.m_delivered * 8.0 / m_rs.m_interval.GetSeconds ());
+    }
+  return true;
+}
+
+void
+TcpTxBuffer::OnApplicationWrite ()
+{
+  if (m_tcb != nullptr &&
+      TailSequence () - m_tcb->m_nextTxSequence < (int) m_tcb->m_segmentSize &&
+      m_tcb->m_bytesInFlight.Get () < m_tcb->m_cWnd)
+    {
+      m_tcb->m_appLimited = m_tcb->m_delivered + m_tcb->m_bytesInFlight.Get () ? : 1U;
+    }
 }
 
 std::ostream &
