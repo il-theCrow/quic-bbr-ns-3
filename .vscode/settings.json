@@ -1,0 +1,9 @@
+{
+    "files.exclude": {
+        "build": true,
+        ".waf*": true,
+        "waf*": true,
+        ".lock-waf_*_build": true,
+        "bindings": true
+    }
+}

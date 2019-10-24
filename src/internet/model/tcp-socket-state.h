@@ -147,7 +147,7 @@ public:
   // Pacing related variables
   bool                   m_pacing            {false}; //!< Pacing status
   DataRate               m_maxPacingRate     {0};    //!< Max Pacing rate
-  DataRate               m_currentPacingRate {0};    //!< Current Pacing rate
+  TracedValue<DataRate>  m_currentPacingRate {0};    //!< Current Pacing rate
 
   Time                   m_minRtt  {Time::Max ()};   //!< Minimum RTT observed throughout the connection
 

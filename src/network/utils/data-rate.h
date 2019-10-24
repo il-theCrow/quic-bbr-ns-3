@@ -261,6 +261,16 @@ double operator* (const DataRate& lhs, const Time& rhs);
  */
 double operator* (const Time& lhs, const DataRate& rhs);
 
+/**
+ * \brief Traced Value callback for a data rate
+ * 
+ * TracedValue Callback signature for data rate
+ *
+ * \param [in] oldValue original value of the traced variable
+ * \param [in] newValue new value of the traced variable
+ */
+typedef void (*DataRateTracedValueCallback) (const DataRate oldValue,
+                                             const DataRate newValue);
 
 } // namespace ns3
 

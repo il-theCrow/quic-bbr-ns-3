@@ -325,7 +325,7 @@ protected:
   std::string WhichState (BbrMode_t state) const;
 
 private:
-  BbrMode_t   m_state        {BbrMode_t::BBR_STARTUP};           //!< Current state of BBR state machine
+  TracedValue<BbrMode_t>   m_state        {BbrMode_t::BBR_STARTUP};           //!< Current state of BBR state machine
   MaxBandwidthFilter_t   m_maxBwFilter;                          //!< Maximum bandwidth filter
   uint32_t    m_bandwidthWindowLength       {0};                 //!< A constant specifying the length of the BBR.BtlBw max filter window, default 10 packet-timed round trips.
   double      m_pacingGain                  {0};                 //!< The dynamic pacing gain factor
@@ -356,6 +356,16 @@ private:
   bool        m_isInitialized               {false};             //!< Set to true after first time initializtion variables
   Ptr<UniformRandomVariable> m_uv           {nullptr};           //!< Uniform Random Variable
 };
+
+/**
+ * \ingroup tcp
+ * TracedValue Callback signature for BBR state trace
+ *
+ * \param [in] oldValue original value of the traced variable
+ * \param [in] newValue new value of the traced variable
+ */
+typedef void (*BbrStatesTracedValueCallback) (const TcpBbr::BbrMode_t oldValue,
+                                              const TcpBbr::BbrMode_t newValue);
 
 } // namespace ns3
 #endif // TCPBBR_H

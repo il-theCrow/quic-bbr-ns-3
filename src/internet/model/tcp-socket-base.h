@@ -363,6 +363,11 @@ public:
   TracedCallback<Time, Time> m_lastRttTrace;
 
   /**
+   * \brief Callback pointer for PacingRate trace chaining
+   */
+  TracedCallback<DataRate, DataRate> m_currentPacingRateTrace;
+
+  /**
    * \brief Callback function to hook to TcpSocketState congestion window
    * \param oldValue old cWnd value
    * \param newValue new cWnd value
@@ -426,6 +431,13 @@ public:
    * \param newValue new rtt value
    */
   void UpdateRtt (Time oldValue, Time newValue);
+
+  /**
+   * \brief Callback function to hook to TcpSocketState PacingRate
+   * \param oldValue old pacing Rate value
+   * \param newValue new pacing Rate value
+   */
+  void UpdateCurrentPacingRate (DataRate oldValue, DataRate newValue);
 
   /**
    * \brief Install a congestion control algorithm on this socket

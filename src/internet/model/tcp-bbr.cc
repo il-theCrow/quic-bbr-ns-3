@@ -60,6 +60,9 @@ TcpBbr::GetTypeId (void)
                    TimeValue (MilliSeconds (200)),
                    MakeTimeAccessor (&TcpBbr::m_probeRttDuration),
                    MakeTimeChecker ())
+    .AddTraceSource ("BbrState", "Current state of the BBR state machine",
+                     MakeTraceSourceAccessor (&TcpBbr::m_state),
+                     "ns3::TcpBbr::BbrStatesTracedValueCallback")
   ;
   return tid;
 }
@@ -162,7 +165,7 @@ TcpBbr::HandleRestartFromIdle (Ptr<TcpSocketState> tcb, const RateSample * rs)
   if (tcb->m_bytesInFlight.Get () == 0U && rs->m_isAppLimited)
     {
       m_idleRestart = true;
-      if (m_state == BbrMode_t::BBR_PROBE_BW)
+      if (m_state.Get () == BbrMode_t::BBR_PROBE_BW)
         {
           SetPacingRate (tcb, 1);
         }
@@ -226,7 +229,7 @@ void
 TcpBbr::CheckCyclePhase (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
-  if (m_state == BbrMode_t::BBR_PROBE_BW && IsNextCyclePhase (tcb, rs))
+  if (m_state.Get () == BbrMode_t::BBR_PROBE_BW && IsNextCyclePhase (tcb, rs))
     {
       AdvanceCyclePhase ();
     }
@@ -281,12 +284,12 @@ void
 TcpBbr::CheckDrain (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
-  if (m_state == BbrMode_t::BBR_STARTUP && m_isPipeFilled)
+  if (m_state.Get () == BbrMode_t::BBR_STARTUP && m_isPipeFilled)
     {
       EnterDrain ();
     }
 
-  if (m_state == BbrMode_t::BBR_DRAIN && tcb->m_bytesInFlight <= InFlight (tcb, 1))
+  if (m_state.Get () == BbrMode_t::BBR_DRAIN && tcb->m_bytesInFlight <= InFlight (tcb, 1))
     {
       EnterProbeBW ();
     }
@@ -317,7 +320,7 @@ void
 TcpBbr::SaveCwnd (Ptr<const TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
-  if (tcb->m_congState != TcpSocketState::CA_RECOVERY && m_state != BbrMode_t::BBR_PROBE_RTT)
+  if (tcb->m_congState != TcpSocketState::CA_RECOVERY && m_state.Get () != BbrMode_t::BBR_PROBE_RTT)
     {
       m_priorCwnd = tcb->m_cWnd;
     }
@@ -379,14 +382,17 @@ void
 TcpBbr::CheckProbeRTT (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
-  if (m_state != BbrMode_t::BBR_PROBE_RTT && m_rtPropExpired && !m_idleRestart)
+  NS_LOG_DEBUG (Simulator::Now () << "WhichState " << WhichState (m_state.Get ())
+                                  << " m_rtPropExpired " << m_rtPropExpired << " !m_idleRestart "
+                                  << !m_idleRestart);
+  if (m_state.Get () != BbrMode_t::BBR_PROBE_RTT && m_rtPropExpired && !m_idleRestart)
     {
       EnterProbeRTT ();
       SaveCwnd (tcb);
       m_probeRttDoneStamp = Seconds (0);
     }
 
-  if (m_state == BbrMode_t::BBR_PROBE_RTT)
+  if (m_state.Get () == BbrMode_t::BBR_PROBE_RTT)
     {
       HandleProbeRTT (tcb);
     }
@@ -441,7 +447,7 @@ void
 TcpBbr::ModulateCwndForProbeRTT (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
-  if (m_state == BbrMode_t::BBR_PROBE_RTT)
+  if (m_state.Get () == BbrMode_t::BBR_PROBE_RTT)
     {
       tcb->m_cWnd = std::min (tcb->m_cWnd.Get (), m_minPipeCwnd);
     }
@@ -560,7 +566,7 @@ uint32_t
 TcpBbr::GetBbrState ()
 {
   NS_LOG_FUNCTION (this);
-  return m_state;
+  return m_state.Get ();
 }
 
 double
@@ -653,7 +659,7 @@ TcpBbr::CwndEvent (Ptr<TcpSocketState> tcb,
       if (tcb->m_bytesInFlight.Get () == 0 && tcb->m_appLimited)
         {
           m_idleRestart = true;
-          if (m_state == BbrMode_t::BBR_PROBE_BW && tcb->m_appLimited)
+          if (m_state.Get () == BbrMode_t::BBR_PROBE_BW && tcb->m_appLimited)
             {
               SetPacingRate (tcb, 1);
             }

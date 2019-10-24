@@ -226,6 +226,14 @@ TcpSocketBase::GetTypeId (void)
                      "Sequence of last received CWR",
                      MakeTraceSourceAccessor (&TcpSocketBase::m_ecnCWRSeq),
                      "ns3::SequenceNumber32TracedValueCallback")
+    .AddAttribute ("CongControl", "The Congestion Control algorithm Object", 
+                   PointerValue (), 
+                   MakePointerAccessor (&TcpSocketBase::m_congestionControl), 
+                   MakePointerChecker<TcpSocketBase> ())
+    .AddTraceSource ("CurrentPacingRate",
+                     "The current pacing rate, if pacing enabled",
+                     MakeTraceSourceAccessor (&TcpSocketBase::m_currentPacingRateTrace),
+                     "ns3::DataRateTracedValueCallback")
   ;
   return tid;
 }
@@ -285,6 +293,11 @@ TcpSocketBase::TcpSocketBase (void)
 
   ok = m_tcb->TraceConnectWithoutContext ("RTT",
                                           MakeCallback (&TcpSocketBase::UpdateRtt, this));
+  NS_ASSERT (ok == true);
+
+  ok = m_tcb->TraceConnectWithoutContext ("CurrentPacingRate",
+                                          MakeCallback (&TcpSocketBase::UpdateCurrentPacingRate, this));
+
   NS_ASSERT (ok == true);
 }
 
@@ -2882,8 +2895,8 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
       if (m_pacingTimer.IsExpired ())
         {
           NS_LOG_DEBUG ("Current Pacing Rate " << m_tcb->m_currentPacingRate);
-          NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-          m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
+          NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
+          m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
         }
       else
         {
@@ -3147,8 +3160,8 @@ TcpSocketBase::SendPendingData (bool withAck)
               if (m_pacingTimer.IsExpired ())
                 {
                   NS_LOG_DEBUG ("Current Pacing Rate " << m_tcb->m_currentPacingRate);
-                  NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-                  m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
+                  NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
+                  m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
                   break;
                 }
             }
@@ -4221,6 +4234,12 @@ void
 TcpSocketBase::UpdateRtt (Time oldValue, Time newValue)
 {
   m_lastRttTrace (oldValue, newValue);
+}
+
+void
+TcpSocketBase::UpdateCurrentPacingRate (DataRate oldValue, DataRate newValue)
+{
+  m_currentPacingRateTrace (oldValue, newValue);
 }
 
 void
