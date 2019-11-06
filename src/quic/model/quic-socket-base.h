@@ -90,6 +90,11 @@ public:
   Time m_lossTime;                          /**< The time at which the next packet will be considered lost based
                                              *   on early transmit or exceeding the reordering window in time. */
 
+  // Pacing related variables
+  bool                   m_pacing            {true}; //!< Pacing status (enabled/disabled) //TODO set false
+  DataRate               m_maxPacingRate     {DataRate ("4Mbps")};    //!< Max allowed Pacing rate //TODO set 0
+  DataRate               m_currentPacingRate {0};    //!< Current Pacing rate
+
   // Congestion Control constants of interests
   uint32_t m_kMinimumWindow;      //!< Default minimum congestion window.
   double m_kLossReductionFactor;  //!< Reduction in congestion window when a new loss event is detected.
@@ -675,6 +680,11 @@ protected:
    */
   void ConnectionSucceeded (void);
 
+  /**
+   * \brief Notify Pacing
+   */
+  void NotifyPacingPerformed (void);
+
   // Connections to other layers of the Stack
   Ipv4EndPoint* m_endPoint;      //!< the IPv4 endpoint
   Ipv6EndPoint* m_endPoint6;     //!< the IPv6 endpoint
@@ -734,6 +744,9 @@ protected:
   uint32_t m_numPacketsReceivedSinceLastAckSent;  //!< Number of packets received since last ACK sent
 
   uint32_t m_initialPacketSize; //!< size of the first packet to be sent durin the handshake (at least 1200 bytes, per RFC)
+
+  // Pacing timer
+  Timer m_pacingTimer       {Timer::REMOVE_ON_DESTROY}; //!< Pacing Event
 
   /**
   * \brief Callback pointer for cWnd trace chaining
