@@ -68,8 +68,8 @@ main (int argc, char *argv[])
       maxBytes = 500 * maxPackets;
     }
 
-  Config::SetDefault ("ns3::QuicSocketState::kMaxPacingRate", StringValue (pacingRate));
-  Config::SetDefault ("ns3::QuicSocketState::kEnablePacing", BooleanValue (isPacingEnabled));
+  Config::SetDefault ("ns3::TcpSocketState::MaxPacingRate", StringValue (pacingRate));
+  Config::SetDefault ("ns3::TcpSocketState::EnablePacing", BooleanValue (isPacingEnabled));
 
   NS_LOG_INFO ("Create nodes.");
   NodeContainer nodes;

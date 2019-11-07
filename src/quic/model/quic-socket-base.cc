@@ -346,16 +346,6 @@ QuicSocketState::GetTypeId (void)
                    UintegerValue (20),
                    MakeUintegerAccessor (&QuicSocketState::m_kMaxPacketsReceivedBeforeAckSend),
                    MakeUintegerChecker<uint32_t> ())
-    .AddAttribute ("kEnablePacing",
-                   "Enable Pacing",
-                   BooleanValue (false),
-                   MakeBooleanAccessor (&QuicSocketState::m_pacing),
-                   MakeBooleanChecker ())
-    .AddAttribute ("kMaxPacingRate",
-                   "Max allowed Pacing Rate",
-                   DataRateValue (DataRate ("4Gb/s")),
-                   MakeDataRateAccessor (&QuicSocketState::m_maxPacingRate),
-                   MakeDataRateChecker ())
   ;
   return tid;
 }

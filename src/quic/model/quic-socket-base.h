@@ -90,11 +90,6 @@ public:
   Time m_lossTime;                          /**< The time at which the next packet will be considered lost based
                                              *   on early transmit or exceeding the reordering window in time. */
 
-  // Pacing related variables
-  bool                   m_pacing            {true}; //!< Pacing status (enabled/disabled) //TODO set false
-  DataRate               m_maxPacingRate     {DataRate ("4Gbps")};    //!< Max allowed Pacing rate //TODO set 0
-  DataRate               m_currentPacingRate {0};    //!< Current Pacing rate
-
   // Congestion Control constants of interests
   uint32_t m_kMinimumWindow;      //!< Default minimum congestion window.
   double m_kLossReductionFactor;  //!< Reduction in congestion window when a new loss event is detected.
