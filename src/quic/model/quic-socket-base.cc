@@ -965,16 +965,16 @@ QuicSocketBase::SendPendingData (bool withAck)
   while (m_txBuffer->GetNumFrameStream0InBuffer () > 0)
     {
       // check pacing timer
-      if (m_tcb->m_pacing)
-        {
-          NS_LOG_INFO ("Pacing is enabled");
-          if (m_pacingTimer.IsRunning ())
-            {
-              NS_LOG_INFO ("Skipping Packet due to pacing - for " << m_pacingTimer.GetDelayLeft ());
-              break;
-            }
-          NS_LOG_INFO ("Pacing Timer is not running");
-        }
+      // if (m_tcb->m_pacing)
+      //   {
+      //     NS_LOG_INFO ("Pacing is enabled");
+      //     if (m_pacingTimer.IsRunning ())
+      //       {
+      //         NS_LOG_INFO ("Skipping Packet due to pacing - for " << m_pacingTimer.GetDelayLeft ());
+      //         break;
+      //       }
+      //     NS_LOG_INFO ("Pacing Timer is not running");
+      //   }
 
       NS_LOG_DEBUG ("Send a frame for stream 0");
       SequenceNumber32 next = ++m_tcb->m_nextTxSequence;

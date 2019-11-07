@@ -92,7 +92,7 @@ public:
 
   // Pacing related variables
   bool                   m_pacing            {true}; //!< Pacing status (enabled/disabled) //TODO set false
-  DataRate               m_maxPacingRate     {DataRate ("4Mbps")};    //!< Max allowed Pacing rate //TODO set 0
+  DataRate               m_maxPacingRate     {DataRate ("4Gbps")};    //!< Max allowed Pacing rate //TODO set 0
   DataRate               m_currentPacingRate {0};    //!< Current Pacing rate
 
   // Congestion Control constants of interests
