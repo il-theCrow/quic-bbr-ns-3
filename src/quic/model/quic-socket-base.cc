@@ -954,6 +954,7 @@ QuicSocketBase::SendPendingData (bool withAck)
   // prioritize stream 0
   while (m_txBuffer->GetNumFrameStream0InBuffer () > 0)
     {
+      NS_LOG_DEBUG("m_txBuffer->GetNumFrameStream0InBuffer (): " << m_txBuffer->GetNumFrameStream0InBuffer ());
       // check pacing timer
       // if (m_tcb->m_pacing)
       //   {
