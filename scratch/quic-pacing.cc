@@ -49,14 +49,14 @@ main (int argc, char *argv[])
   LogComponentEnableAll (LOG_PREFIX_TIME);
   LogComponentEnableAll (LOG_PREFIX_FUNC);
   LogComponentEnableAll (LOG_PREFIX_NODE);
-  // LogComponentEnable ("QuicSocketBase", LOG_LEVEL_INFO);
+  LogComponentEnable ("QuicSocketBase", LOG_LEVEL_INFO);
   LogComponentEnable ("QuicPacingExample", LOG_LEVEL_ALL);
 
   bool tracing = false;
   uint32_t maxBytes = 1 << 20;
   uint32_t QUICFlows = 1;
   bool isPacingEnabled = true;
-  std::string pacingRate = "4Gbps";
+  std::string pacingRate = "4Mbps";
   uint32_t maxPackets = 0;
 
   uint32_t run = 0;
@@ -81,8 +81,8 @@ main (int argc, char *argv[])
   SeedManager::SetSeed (1);
   SeedManager::SetRun (run);
 
-  Config::SetDefault ("ns3::QuicSocketState::kMaxPacingRate", StringValue (pacingRate));
-  Config::SetDefault ("ns3::QuicSocketState::kEnablePacing", BooleanValue (isPacingEnabled));
+  Config::SetDefault ("ns3::TcpSocketState::MaxPacingRate", StringValue (pacingRate));
+  Config::SetDefault ("ns3::TcpSocketState::EnablePacing", BooleanValue (isPacingEnabled));
 
   // 4 MB of buffer >> BDP
   Config::SetDefault ("ns3::QuicSocketBase::SocketRcvBufSize", UintegerValue (1 << 21));
@@ -97,8 +97,8 @@ main (int argc, char *argv[])
 
   NS_LOG_INFO ("Create channels.");
   PointToPointHelper pointToPoint;
-  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("40Gbps"));
-  pointToPoint.SetChannelAttribute ("Delay", StringValue ("0.01ms"));
+  pointToPoint.SetDeviceAttribute ("DataRate", StringValue ("40Mbps"));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue ("1ms"));
 
   NetDeviceContainer devices;
   devices = pointToPoint.Install (nodes);
