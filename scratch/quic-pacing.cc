@@ -49,11 +49,11 @@ main (int argc, char *argv[])
   LogComponentEnableAll (LOG_PREFIX_TIME);
   LogComponentEnableAll (LOG_PREFIX_FUNC);
   LogComponentEnableAll (LOG_PREFIX_NODE);
-  LogComponentEnable ("QuicSocketBase", LOG_LEVEL_INFO);
+  // LogComponentEnable ("QuicSocketBase", LOG_LEVEL_ALL);
   LogComponentEnable ("QuicPacingExample", LOG_LEVEL_ALL);
 
   bool tracing = false;
-  uint32_t maxBytes = 1 << 20;
+  uint32_t maxBytes = 0;
   uint32_t QUICFlows = 1;
   bool isPacingEnabled = true;
   std::string pacingRate = "4Mbps";
