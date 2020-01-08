@@ -128,7 +128,8 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
 
 int main (int argc, char *argv[])
 {
-  std::string transport_prot = "TcpVegas";
+  std::string transport_prot = "QuicBbr";
+  bool pacing = true;
   double error_p = 0.0;
   std::string bandwidth = "2Mbps";
   std::string delay = "0.01ms";
@@ -177,10 +178,11 @@ int main (int argc, char *argv[])
   LogComponentEnableAll (LOG_PREFIX_TIME);
   LogComponentEnableAll (LOG_PREFIX_FUNC);
   LogComponentEnableAll (LOG_PREFIX_NODE);
-  LogComponentEnable ("QuicSocketTxBuffer", LOG_LEVEL_ALL);
+  // LogComponentEnable ("QuicSocketTxBuffer", LOG_LEVEL_ALL);
   LogComponentEnable ("QuicSocketBase", LOG_LEVEL_ALL);
-  LogComponentEnable("QuicVariantsComparison", LOG_LEVEL_ALL);
-  LogComponentEnable("QuicL5Protocol", LOG_LEVEL_ALL);
+  LogComponentEnable ("QuicBbr", LOG_LEVEL_ALL);
+  // LogComponentEnable("QuicVariantsComparison", LOG_LEVEL_ALL);
+  // LogComponentEnable("QuicL5Protocol", LOG_LEVEL_ALL);
   // LogComponentEnable("BulkSendApplication", LOG_LEVEL_INFO);
   // LogComponentEnable("PfifoFastQueueDisc", LOG_LEVEL_ALL);
   // LogComponentEnable("TcpVegas", LOG_LEVEL_ALL);
