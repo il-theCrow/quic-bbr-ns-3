@@ -5,6 +5,36 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "(lldb) Launch from scratch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/scratch/${fileBasenameNoExtension}",
+            "args": [],
+            "stopAtEntry": false,
+            "preLaunchTask": "Build",
+            "cwd": "${workspaceFolder}/results",
+            "environment": [
+                {
+                    "name": "DYLD_LIBRARY_PATH",
+                    "value": "./build/lib/"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            // "miDebuggerPath": "/usr/local/opt/llvm/bin/lldb-mi"
+        },
+        {
+            "name": "(CodeLLDB) Launch variants-comparison",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/scratch/quic-variants-comparison-bulksend", // Local path.
+            "cwd": "${workspaceFolder}/results",
+            "env": {
+                "DYLD_LIBRARY_PATH": "${workspaceFolder}/build/lib/"
+            },
+            "stdio": [null, null, "${workspaceFolder}/results/quic-variants-comparison.log"],
+        },
+        {
             "name": "(gdb) Launch from scratch",
             "type": "cppdbg",
             "request": "launch",

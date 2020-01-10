@@ -21,10 +21,10 @@
  *          Davide Marcato <davidemarcato@outlook.com>
  *          
  */
-
+/*
  #define NS_LOG_APPEND_CONTEXT \
   if (m_node and m_connectionId) { std::clog << " [node " << m_node->GetId () << " socket " << m_connectionId << "] "; }
-
+*/
 
 #include "ns3/abort.h"
 #include "ns3/node.h"
@@ -159,6 +159,11 @@ QuicSocketBase::GetTypeId (void)
                    "AckDelayExponent", "Ack Delay Exponent", UintegerValue (3),
                    MakeUintegerAccessor (&QuicSocketBase::m_ack_delay_exponent),
                    MakeUintegerChecker<uint8_t> ())
+    .AddAttribute ("FlushOnClose",
+                   "Determines the connection close behavior",
+                   BooleanValue (true),
+                   MakeBooleanAccessor (&QuicSocketBase::m_flushOnClose),
+                   MakeBooleanChecker ())
     .AddAttribute ("kMaxTLPs",
                    "Maximum number of tail loss probes before an RTO fires",
                    UintegerValue (2),
@@ -217,12 +222,12 @@ QuicSocketBase::GetTypeId (void)
                                          &QuicSocketBase::SetInitialPacketSize),
                    MakeUintegerChecker<uint32_t> (
                     QuicSocketBase::MIN_INITIAL_PACKET_SIZE, UINT32_MAX))
-//    .AddAttribute (
-//                   "LegacyCongestionControl",
-//                   "When true, use TCP implementations for the congestion control",
-//                   BooleanValue (false),
-//                   MakeBooleanAccessor (&QuicSocketBase::m_quicCongestionControlLegacy),
-//                   MakeBooleanChecker ())
+    .AddAttribute (
+                   "LegacyCongestionControl",
+                   "When true, use TCP implementations for the congestion control",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&QuicSocketBase::m_quicCongestionControlLegacy),
+                   MakeBooleanChecker ())
     // .AddTraceSource ("RTO", "Retransmission timeout",
     //                  MakeTraceSourceAccessor (&QuicSocketBase::m_rto),
     //                  "ns3::Time::TracedValueCallback").AddTraceSource (
@@ -292,6 +297,15 @@ QuicSocketBase::GetTypeId (void)
                      "Receive QUIC packet from UDP protocol",
                      MakeTraceSourceAccessor (&QuicSocketBase::m_rxTrace),
                      "ns3::QuicSocketBase::QuicTxRxTracedCallback")
+    .AddAttribute ("CongControl",
+                   "The Object managing CC operations",
+                   PointerValue (),
+                   MakePointerAccessor (&QuicSocketBase::m_congestionControl),
+                   MakePointerChecker<QuicCongestionOps> ())
+    .AddTraceSource ("CurrentPacingRate",
+                     "The current pacing rate, if pacing enabled",
+                     MakeTraceSourceAccessor (&QuicSocketBase::m_currentPacingRateTrace),
+                     "ns3::DataRateTracedValueCallback")
   ;
   return tid;
 }
@@ -473,6 +487,7 @@ QuicSocketBase::QuicSocketBase (void)
     m_rto (
       Seconds (30.0)),
     m_drainingPeriodTimeout (Seconds (90.0)),
+    m_closeOnEmpty (false),
     m_congestionControl (
       0),
     m_lastRtt (Seconds(0.0)),
@@ -531,6 +546,12 @@ QuicSocketBase::QuicSocketBase (void)
 
   ok = m_tcb->TraceConnectWithoutContext ("HighestSequence",
                                           MakeCallback (&QuicSocketBase::UpdateHighTxMark, this));
+  NS_ASSERT (ok == true);
+
+  ok = m_tcb->TraceConnectWithoutContext ("CurrentPacingRate",
+                                          MakeCallback (&QuicSocketBase::UpdateCurrentPacingRate, this));
+  NS_ASSERT (ok == true);
+
 }
 
 QuicSocketBase::QuicSocketBase (const QuicSocketBase& sock)   // Copy constructor
@@ -561,6 +582,7 @@ QuicSocketBase::QuicSocketBase (const QuicSocketBase& sock)   // Copy constructo
     m_couldContainTransportParameters (sock.m_couldContainTransportParameters),
     m_rto (sock.m_rto),
     m_drainingPeriodTimeout (sock.m_drainingPeriodTimeout),
+    m_closeOnEmpty (sock.m_closeOnEmpty),
     m_lastRtt (sock.m_lastRtt),
     m_quicCongestionControlLegacy (sock.m_quicCongestionControlLegacy),
     m_queue_ack (sock.m_queue_ack),
@@ -874,6 +896,12 @@ QuicSocketBase::Send (Ptr<Packet> p, uint32_t flags)
   NS_LOG_FUNCTION (this << flags);
   int data = 0;
   
+  if (m_drainingPeriodEvent.IsRunning ())
+    {
+      NS_LOG_INFO("Socket in draining state, cannot send packets");
+      return 0;
+    }
+  
   if (flags == 0)
     {
       data = Send (p);
@@ -890,6 +918,12 @@ QuicSocketBase::Send (Ptr<Packet> p)
 {
   NS_LOG_FUNCTION (this);
 
+  if (m_drainingPeriodEvent.IsRunning ())
+    {
+      NS_LOG_INFO("Socket in draining state, cannot send packets");
+      return 0;
+    }
+  
   int data = m_quicl5->DispatchSend (p);
 
   return data;
@@ -947,6 +981,11 @@ QuicSocketBase::SendPendingData (bool withAck)
 
   if (m_txBuffer->AppSize () == 0)
     {
+      if (m_closeOnEmpty)
+        {
+          m_drainingPeriodEvent.Cancel ();
+          SendConnectionClosePacket (0, "Scheduled connection close - no error");
+        }
       NS_LOG_INFO ("Nothing to send");
       return false;
     }
@@ -1014,6 +1053,13 @@ QuicSocketBase::SendPendingData (bool withAck)
 
   while (availableWindow > 0 and m_txBuffer->AppSize () > 0)
     {
+      // check draining period
+      if (m_drainingPeriodEvent.IsRunning ())
+        {
+          NS_LOG_INFO ("Draining period: no packets can be sent");
+          return false;
+        }
+
       // check pacing timer
       if (m_tcb->m_pacing)
         {
@@ -1035,13 +1081,13 @@ QuicSocketBase::SendPendingData (bool withAck)
 
       uint32_t availableData = m_txBuffer->AppSize ();
 
-  	  if(availableData < availableWindow)
+  	  if(availableData < availableWindow and !m_closeOnEmpty)
   	  {
         NS_LOG_INFO("Ask the app for more data before trying to send");
   		  NotifySend(GetTxAvailable());
   	  }
 
-      if (availableWindow < GetSegSize () and availableData > availableWindow)
+      if (availableWindow < GetSegSize () and availableData > availableWindow and !m_closeOnEmpty)
         {
           NS_LOG_INFO ("Preventing Silly Window Syndrome. Wait to Send.");
           break;
@@ -1278,6 +1324,7 @@ QuicSocketBase::SendDataPacket (SequenceNumber32 packetNumber,
     }
   else
     {
+      NS_LOG_INFO("Draining period event running");
       return -1;
     }
 
@@ -1307,8 +1354,8 @@ QuicSocketBase::SendDataPacket (SequenceNumber32 packetNumber,
         {
           NS_LOG_DEBUG ("Current Pacing Rate " << m_tcb->m_currentPacingRate);
           NS_LOG_DEBUG ("Pacing Timer is in expired state, activate it. Expires in " << 
-                        m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-          m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
+                        m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
+          m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
         }
       else
         {
@@ -1363,6 +1410,7 @@ QuicSocketBase::SendDataPacket (SequenceNumber32 packetNumber,
   else
     {
       // 0 bytes sent - the socket is closed!
+      NS_LOG_LOGIC("Socket closed");
       return 0;
     }
 
@@ -1677,14 +1725,21 @@ QuicSocketBase::Close (void)
       and m_socketState != CLOSING)   //Connection Close from application signal
     {
       SetState (CLOSING);
-      m_drainingPeriodEvent.Cancel ();
+      if (m_flushOnClose)
+        {
+          m_closeOnEmpty = true;
+        }
+      else
+        {
+          m_drainingPeriodEvent.Cancel ();
+          SendConnectionClosePacket (0, "Scheduled connection close - no error");
+        }
       m_idleTimeoutEvent.Cancel ();
       NS_LOG_LOGIC (
         this << " Close Schedule DoClose at time " << Simulator::Now ().GetSeconds () << " to expire at time " << (Simulator::Now () + m_drainingPeriodTimeout.Get ()).GetSeconds ());
       m_drainingPeriodEvent = Simulator::Schedule (m_drainingPeriodTimeout,
                                                    &QuicSocketBase::DoClose,
                                                    this);
-      SendConnectionClosePacket (0, "Scheduled connection close - no error");
     }
   else if (m_idleTimeoutEvent.IsExpired () and m_socketState != CLOSING
            and m_socketState != IDLE and m_socketState != LISTENING) //Connection Close due to Idle Period termination
@@ -3015,6 +3070,12 @@ void
 QuicSocketBase::UpdateHighTxMark (SequenceNumber32 oldValue, SequenceNumber32 newValue)
 {
   m_highTxMarkTrace (oldValue.GetValue (), newValue.GetValue ());
+}
+
+void
+QuicSocketBase::UpdateCurrentPacingRate (DataRate oldValue, DataRate newValue)
+{
+  m_currentPacingRateTrace (oldValue, newValue);
 }
 
 void

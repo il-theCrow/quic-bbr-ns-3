@@ -2851,8 +2851,8 @@ TcpSocketBase::SendDataPacket (SequenceNumber32 seq, uint32_t maxSize, bool with
       if (m_pacingTimer.IsExpired ())
         {
           NS_LOG_DEBUG ("Current Pacing Rate " << m_tcb->m_currentPacingRate);
-          NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-          m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
+          NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
+          m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
         }
       else
         {
@@ -3114,8 +3114,8 @@ TcpSocketBase::SendPendingData (bool withAck)
               if (m_pacingTimer.IsExpired ())
                 {
                   NS_LOG_DEBUG ("Current Pacing Rate " << m_tcb->m_currentPacingRate);
-                  NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-                  m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
+                  NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
+                  m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.Get ().CalculateBytesTxTime (sz));
                   break;
                 }
             }

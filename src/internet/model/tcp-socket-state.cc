@@ -72,6 +72,10 @@ TcpSocketState::GetTypeId (void)
                      "Last RTT sample",
                      MakeTraceSourceAccessor (&TcpSocketState::m_lastRtt),
                      "ns3::TracedValueCallback::Time")
+    .AddTraceSource ("CurrentPacingRate",
+                     "The current pacing rate, if pacing is enabled",
+                     MakeTraceSourceAccessor (&TcpSocketState::m_currentPacingRate),
+                     "ns3::DataRateTracedValueCallback")
   ;
   return tid;
 }

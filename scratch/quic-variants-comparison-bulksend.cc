@@ -74,7 +74,15 @@ CwndChange (Ptr<OutputStreamWrapper> stream, uint32_t oldCwnd, uint32_t newCwnd)
 static void
 RttChange (Ptr<OutputStreamWrapper> stream, Time oldRtt, Time newRtt)
 {
-  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldRtt.GetSeconds () << "\t" << newRtt.GetSeconds () << std::endl;
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldRtt.GetSeconds () << "\t" 
+                        << newRtt.GetSeconds () << std::endl;
+}
+
+static void
+PacingRateChange (Ptr<OutputStreamWrapper> stream, DataRate oldPacingRate, DataRate newPacingRate)
+{
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldPacingRate.GetBitRate ()
+                        << "\t" << newPacingRate.GetBitRate () << std::endl;
 }
 
 static void
@@ -107,6 +115,12 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
   std::ostringstream fileRCWnd;
   fileRCWnd<<pathVersion << "QUIC-rwnd-change"  << serverId << "" << finalPart;
 
+  std::ostringstream pathPacing;
+  pathPacing << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/CurrentPacingRate";
+
+  std::ostringstream filePacing;
+  filePacing << pathVersion << "QUIC-pacing-rate" << serverId << "" << finalPart;
+
   std::ostringstream fileName;
   fileName << pathVersion << "QUIC-rx-data" << serverId << "" << finalPart;
   std::ostringstream pathRx;
@@ -124,6 +138,9 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
 
   Ptr<OutputStreamWrapper> stream4 = asciiTraceHelper.CreateFileStream (fileRCWnd.str ().c_str ());
   Config::ConnectWithoutContext (pathRCWnd.str ().c_str (), MakeBoundCallback(&CwndChange, stream4));
+
+  Ptr<OutputStreamWrapper> streampacing = asciiTraceHelper.CreateFileStream (filePacing.str ().c_str ());
+  Config::ConnectWithoutContext (pathPacing.str ().c_str (), MakeBoundCallback (&PacingRateChange, streampacing));
 }
 
 int main (int argc, char *argv[])
@@ -133,8 +150,8 @@ int main (int argc, char *argv[])
   double error_p = 0.0;
   std::string bandwidth = "2Mbps";
   std::string delay = "0.01ms";
-  std::string access_bandwidth = "12Mbps";
-  std::string access_delay = "25ms";
+  std::string access_bandwidth = "10Mbps";
+  std::string access_delay = "45ms";
   bool tracing = false;
   std::string prefix_file_name = "QuicVariantsComparison";
   double data_mbytes = 0;
@@ -196,7 +213,9 @@ int main (int argc, char *argv[])
   Config::SetDefault ("ns3::QuicSocketBase::SocketSndBufSize", UintegerValue (1 << 21));
   Config::SetDefault ("ns3::QuicStreamBase::StreamSndBufSize", UintegerValue (1 << 21));
   Config::SetDefault ("ns3::QuicStreamBase::StreamRcvBufSize", UintegerValue (1 << 21));
- 
+
+  Config::SetDefault ("ns3::TcpSocketState::EnablePacing", BooleanValue (pacing));
+
   // Select congestion control variant
   if (transport_prot.compare ("ns3::TcpWestwoodPlus") == 0)
     { 

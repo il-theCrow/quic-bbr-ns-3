@@ -483,6 +483,13 @@ public:
   void UpdateNextTxSequence (SequenceNumber32 oldValue, SequenceNumber32 newValue);
 
   /**
+   * \brief Callback function to hook to QuicSocketState PacingRate
+   * \param oldValue old pacing Rate value
+   * \param newValue new pacing Rate value
+   */
+  void UpdateCurrentPacingRate (DataRate oldValue, DataRate newValue);
+
+  /**
    * \brief Set the initial Slow Start Threshold.
    *
    * \param threshold the Slow Start Threshold (in bytes)
@@ -737,6 +744,8 @@ protected:
   TracedValue<Time> m_drainingPeriodTimeout;  //!< Draining Period timeout
   EventId m_sendAckEvent;                     //!< Send ACK timeout event
   EventId m_delAckEvent;                      //!< Delayed ACK timeout event
+  bool m_flushOnClose;                        //!< Control behavior on connection close
+  bool m_closeOnEmpty;                        //!< True if the socket will close after sending the buffered packets
 
   // Congestion Control
   Ptr<QuicSocketState> m_tcb;                     //!< Congestion control informations
@@ -782,6 +791,11 @@ protected:
 
   TracedCallback<Ptr<const Packet>, const QuicHeader&,
                  Ptr<const QuicSocketBase> > m_rxTrace; //!< Trace of received packets
+
+  /**
+   * \brief Callback pointer for PacingRate trace chaining
+   */
+  TracedCallback<DataRate, DataRate> m_currentPacingRateTrace;
 };
 
 } //namespace ns3
