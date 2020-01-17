@@ -138,7 +138,7 @@ int main (int argc, char *argv[])
   bool tracing = false;
   std::string prefix_file_name = "QuicVariantsComparison";
   double data_mbytes = 0;
-  uint32_t mtu_bytes = 1400;
+  uint32_t mtu_bytes = 1500;
   uint16_t num_flows = 1;
   float duration = 100;
   uint32_t run = 0;
@@ -181,6 +181,8 @@ int main (int argc, char *argv[])
   // LogComponentEnable ("QuicSocketTxBuffer", LOG_LEVEL_ALL);
   LogComponentEnable ("QuicSocketBase", LOG_LEVEL_ALL);
   LogComponentEnable ("QuicBbr", LOG_LEVEL_ALL);
+  LogComponentEnable ("QuicCongestionControl", LOG_LEVEL_ALL);
+  LogComponentEnable ("QuicStreamBase", LOG_LEVEL_ALL);
   // LogComponentEnable("QuicVariantsComparison", LOG_LEVEL_ALL);
   // LogComponentEnable("QuicL5Protocol", LOG_LEVEL_ALL);
   // LogComponentEnable("BulkSendApplication", LOG_LEVEL_INFO);
@@ -213,12 +215,12 @@ int main (int argc, char *argv[])
     }
 
   // Create gateways, sources, and sinks
-  NodeContainer gateways;
-  gateways.Create (2);
   NodeContainer sources;
   sources.Create (num_flows);
   NodeContainer sinks;
   sinks.Create (num_flows);
+  NodeContainer gateways;
+  gateways.Create (2);
 
   // Configure the error model
   // Here we use RateErrorModel with packet error rate
@@ -272,6 +274,9 @@ int main (int argc, char *argv[])
                       QueueSizeValue (QueueSize (QueueSizeUnit::PACKETS, size / mtu_bytes)));
   Config::SetDefault ("ns3::CoDelQueueDisc::MaxSize",
                       QueueSizeValue (QueueSize (QueueSizeUnit::BYTES, size)));
+
+  Config::SetDefault ("ns3::QuicSocketBase::MaxPacketSize", UintegerValue (mtu_bytes - 60));
+  // Config::SetDefault ("ns3::TcpSocketBase::MaxPacketSize", UintegerValue (mtu_bytes - 60));
 
   for (int i = 0; i < num_flows; i++)
     {
@@ -329,15 +334,15 @@ int main (int argc, char *argv[])
       AddressValue remoteAddress (InetSocketAddress (sink_interfaces.GetAddress (i, 0), port));
       BulkSendHelper ftp ("ns3::QuicSocketFactory", Address ());
       ftp.SetAttribute ("Remote", remoteAddress);
-      ftp.SetAttribute ("SendSize", UintegerValue (1400));
+      ftp.SetAttribute ("SendSize", UintegerValue (2*mtu_bytes));
       clientApps.Add(ftp.Install (sources.Get (i)));
       PacketSinkHelper sinkHelper ("ns3::QuicSocketFactory", sinkLocalAddress);
       sinkHelper.SetAttribute ("Protocol", TypeIdValue (QuicSocketFactory::GetTypeId ()));
       serverApps.Add(sinkHelper.Install (sinks.Get (i)));
     }
 
-  serverApps.Start (Seconds (0.99));
-  clientApps.Stop (Seconds (20.0));
+  serverApps.Start (Seconds (start_time));
+  clientApps.Stop (Seconds (stop_time));
   clientApps.Start (Seconds (2));
 
   for (uint16_t i = 0; i < num_flows; i++)
