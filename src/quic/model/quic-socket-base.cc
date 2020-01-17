@@ -996,16 +996,16 @@ QuicSocketBase::SendPendingData (bool withAck)
   while (m_txBuffer->GetNumFrameStream0InBuffer () > 0)
     {
       // check pacing timer
-      // if (m_tcb->m_pacing)
-      //   {
-      //     NS_LOG_INFO ("Pacing is enabled");
-      //     if (m_pacingTimer.IsRunning ())
-      //       {
-      //         NS_LOG_INFO ("Skipping Packet due to pacing - for " << m_pacingTimer.GetDelayLeft ());
-      //         break;
-      //       }
-      //     NS_LOG_INFO ("Pacing Timer is not running");
-      //   }
+      if (m_tcb->m_pacing)
+        {
+          NS_LOG_DEBUG ("Pacing is enabled");
+          if (m_pacingTimer.IsRunning ())
+            {
+              NS_LOG_INFO ("Skipping Packet due to pacing - for " << m_pacingTimer.GetDelayLeft ());
+              break;
+            }
+          NS_LOG_DEBUG ("Pacing Timer is not running");
+        }
 
       NS_LOG_DEBUG ("Send a frame for stream 0");
       SequenceNumber32 next = ++m_tcb->m_nextTxSequence;
@@ -1035,19 +1035,6 @@ QuicSocketBase::SendPendingData (bool withAck)
                                            << " MaxPacketSize " << GetSegSize ());
 
       ++nPacketsSent;
-
-      // start pacing timer once a packet is sent MAY BE UNUSED
-      // if (m_tcb->m_pacing)
-      //   {
-      //     NS_LOG_INFO ("Pacing is enabled");
-      //     if (m_pacingTimer.IsExpired ())
-      //       {
-      //         NS_LOG_DEBUG ("Current Pacing Rate " << m_tcb->m_currentPacingRate);
-      //         NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-      //         m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-      //         break;
-      //       }
-      //   }
     }
   uint32_t availableWindow = AvailableWindow ();
 
@@ -1063,13 +1050,13 @@ QuicSocketBase::SendPendingData (bool withAck)
       // check pacing timer
       if (m_tcb->m_pacing)
         {
-          NS_LOG_INFO ("Pacing is enabled");
+          NS_LOG_DEBUG ("Pacing is enabled");
           if (m_pacingTimer.IsRunning ())
             {
               NS_LOG_INFO ("Skipping Packet due to pacing - for " << m_pacingTimer.GetDelayLeft ());
               break;
             }
-          NS_LOG_INFO ("Pacing Timer is not running");
+          NS_LOG_DEBUG ("Pacing Timer is not running");
         }
 
       // check the state of the socket!
@@ -1123,19 +1110,6 @@ QuicSocketBase::SendPendingData (bool withAck)
       ++nPacketsSent;
 
       availableWindow = AvailableWindow ();
-
-      // start pacing timer once a packet is sent MAY BE UNUSED
-      // if (m_tcb->m_pacing)
-      //   {
-      //     NS_LOG_INFO ("Pacing is enabled");
-      //     if (m_pacingTimer.IsExpired ())
-      //       {
-      //         NS_LOG_DEBUG ("Current Pacing Rate " << m_tcb->m_currentPacingRate);
-      //         NS_LOG_DEBUG ("Timer is in expired state, activate it " << m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-      //         m_pacingTimer.Schedule (m_tcb->m_currentPacingRate.CalculateBytesTxTime (sz));
-      //         break;
-      //       }
-      //   }
     }
 
   if (nPacketsSent > 0)
@@ -1346,10 +1320,17 @@ QuicSocketBase::SendDataPacket (SequenceNumber32 packetNumber,
 
   uint32_t sz = p->GetSize ();
 
+  // check whether the connection is appLimited, i.e. not enough data to fill a packet
+  if (sz < maxSize and m_tcb->m_bytesInFlight.Get () < m_tcb->m_cWnd)
+    {
+      NS_LOG_LOGIC("Connection is Application-Limited. sz = " << sz << " < maxSize = " << maxSize);
+      m_tcb->m_appLimitedUntil = m_tcb->m_delivered + m_tcb->m_bytesInFlight.Get () ? : 1U;
+    }
+
   // perform pacing
   if (m_tcb->m_pacing)
     {
-      NS_LOG_INFO ("Pacing is enabled");
+      NS_LOG_DEBUG ("Pacing is enabled");
       if (m_pacingTimer.IsExpired ())
         {
           NS_LOG_DEBUG ("Current Pacing Rate " << m_tcb->m_currentPacingRate);
@@ -1419,6 +1400,8 @@ QuicSocketBase::SendDataPacket (SequenceNumber32 packetNumber,
   m_txTrace (p, head, this);
   NotifyDataSent (sz);
 
+  m_txBuffer->UpdatePacketSent(packetNumber, sz);
+
   if (!m_quicCongestionControlLegacy)
     {
       DynamicCast<QuicCongestionOps> (m_congestionControl)->OnPacketSent (
@@ -1429,7 +1412,6 @@ QuicSocketBase::SendDataPacket (SequenceNumber32 packetNumber,
       SetReTxTimeout ();
     }
 
-  m_txBuffer->UpdatePacketSent(packetNumber, sz);
   return sz;
 }
 
@@ -1656,6 +1638,7 @@ QuicSocketBase::BytesInFlight () const
   uint32_t bytesInFlight = m_txBuffer->BytesInFlight ();
 
   NS_LOG_INFO ("Returning calculated bytesInFlight: " << bytesInFlight);
+  m_tcb->m_bytesInFlight = bytesInFlight;
   return bytesInFlight;
 }
 
@@ -3110,7 +3093,7 @@ void
 QuicSocketBase::NotifyPacingPerformed (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_INFO ("Performing Pacing");
+  NS_LOG_INFO ("Pacing timer expired, try sending a packet");
   SendPendingData (m_connected);
 }
 
