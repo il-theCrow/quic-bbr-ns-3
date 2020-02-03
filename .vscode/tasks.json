@@ -13,6 +13,11 @@
             }
         },
         {
+            "label": "ClearLogsAndBuild",
+            "type": "shell",
+            "command": "rm results/*.log ; ./waf"
+        },
+        {
             "label": "Run tests",
             "type": "shell",
             "command": "./test.py",

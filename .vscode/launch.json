@@ -21,18 +21,19 @@
             ],
             "externalConsole": false,
             "MIMode": "lldb",
-            // "miDebuggerPath": "/usr/local/opt/llvm/bin/lldb-mi"
+            "miDebuggerPath": "/usr/local/Cellar/llvm/9.0.0_1/bin/lldb-mi",
         },
         {
             "name": "(CodeLLDB) Launch variants-comparison",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/build/scratch/quic-variants-comparison-bulksend", // Local path.
+            "program": "${workspaceFolder}/build/scratch/quic-variants-comparison-variable-rate", // Local path.
             "cwd": "${workspaceFolder}/results",
             "env": {
                 "DYLD_LIBRARY_PATH": "${workspaceFolder}/build/lib/"
             },
-            "stdio": [null, null, "${workspaceFolder}/results/quic-variants-comparison.log"],
+            "stdio": [null, null, "${workspaceFolder}/results/quic-variants-comparison2.log"],
+            "preLaunchTask": "Build",
         },
         {
             "name": "(gdb) Launch from scratch",

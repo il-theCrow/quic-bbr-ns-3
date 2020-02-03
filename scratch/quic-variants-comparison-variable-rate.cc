@@ -160,23 +160,40 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
 
 }
 
-
+/**
+ * Changes the rate of the bottleneck link
+ * \param gateways the nodes at the end of the bottleneck link
+ * \param newRate the new rate to set
+ */
+static void
+ChangeRate (NodeContainer gateways, DataRate newRate)
+{
+  for (auto it = gateways.Begin(); it != gateways.End(); ++it)
+    {
+      uint32_t id = (*it)->GetId ();
+      std::ostringstream path;
+      path << "/NodeList/" << id << "/DeviceList/2/$ns3::PointToPointNetDevice/DataRate";
+      Config::Set (path.str ().c_str (), DataRateValue (newRate));
+    }
+  NS_LOG_INFO ("BtlBw changed to " << newRate);
+}
 
 int main (int argc, char *argv[])
 {
   std::string transport_prot = "QuicBbr";
   bool pacing = true;
   double error_p = 0.0;
-  std::string bandwidth = "2Mbps";
+  std::string bandwidth1 = "2Mbps";
+  std::string bandwidth2 = "4Mbps";
   std::string delay = "0.01ms";
   std::string access_bandwidth = "10Mbps";
   std::string access_delay = "45ms";
   bool tracing = false;
-  std::string prefix_file_name = "QuicVariantsComparison";
+  std::string prefix_file_name = "QuicVariantsComparisonVarRate";
   double data_mbytes = 0;
   uint32_t mtu_bytes = 1500;
   uint16_t num_flows = 1;
-  float duration = 100;
+  float duration = 60.0;
   uint32_t run = 0;
   bool flow_monitor = false;
   bool pcap = false;
@@ -188,7 +205,8 @@ int main (int argc, char *argv[])
                 "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
                 "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat ", transport_prot);
   cmd.AddValue ("error_p", "Packet error rate", error_p);
-  cmd.AddValue ("bandwidth", "Bottleneck bandwidth", bandwidth);
+  cmd.AddValue ("bandwidth1", "Bottleneck bandwidth 1", bandwidth1);
+  cmd.AddValue ("bandwidth2", "Bottleneck bandwidth 2", bandwidth2);
   cmd.AddValue ("delay", "Bottleneck delay", delay);
   cmd.AddValue ("access_bandwidth", "Access link bandwidth", access_bandwidth);
   cmd.AddValue ("access_delay", "Access link delay", access_delay);
@@ -238,6 +256,7 @@ int main (int argc, char *argv[])
 
   Config::SetDefault ("ns3::TcpSocketState::EnablePacing", BooleanValue (pacing));
 
+ 
   // Select congestion control variant
   if (transport_prot.compare ("ns3::TcpWestwoodPlus") == 0)
     { 
@@ -271,7 +290,7 @@ int main (int argc, char *argv[])
   error_model.SetRate (error_p);
 
   PointToPointHelper BottleneckLink;
-  BottleneckLink.SetDeviceAttribute ("DataRate", StringValue (bandwidth));
+  BottleneckLink.SetDeviceAttribute ("DataRate", StringValue (bandwidth1));
   BottleneckLink.SetChannelAttribute ("Delay", StringValue (delay));
   BottleneckLink.SetDeviceAttribute ("ReceiveErrorModel", PointerValue (&error_model));
   
@@ -302,12 +321,14 @@ int main (int argc, char *argv[])
   Ipv4InterfaceContainer sink_interfaces;
 
   DataRate access_b (access_bandwidth);
-  DataRate bottle_b (bandwidth);
+  DataRate bottle_b1 (bandwidth1);
+  DataRate bottle_b2 (bandwidth2);
   Time access_d (access_delay);
   Time bottle_d (delay);
 
-  uint32_t size = (std::min (access_b, bottle_b).GetBitRate () / 8) *
-    ((access_d + bottle_d) * 2).GetSeconds ();
+  uint32_t size = (std::min (access_b, 
+    std::max (bottle_b1, bottle_b2)).GetBitRate () / 8) *
+      ((access_d + bottle_d) * 2).GetSeconds ();
 
   Config::SetDefault ("ns3::PfifoFastQueueDisc::MaxSize",
                       QueueSizeValue (QueueSize (QueueSizeUnit::PACKETS, size / mtu_bytes)));
@@ -389,11 +410,19 @@ int main (int argc, char *argv[])
       auto n2 = sinks.Get (i);
       auto n1 = sources.Get (i);
       Time t = Seconds(2.100001);
+      std::ostringstream serverFilesPfx;
+      serverFilesPfx << "./" /* << prefix_file_name */ << "server";
+      std::ostringstream clientFilesPfx;
+      clientFilesPfx << "./" /* << prefix_file_name */ << "client";
+
       Simulator::Schedule (t, &Traces, n2->GetId(), 
-            "./server", ".txt");
+            serverFilesPfx.str ().c_str (), ".data");
       Simulator::Schedule (t, &Traces, n1->GetId(), 
-            "./client", ".txt");
+            clientFilesPfx.str ().c_str(), ".data");
     }
+
+  Simulator::Schedule (Seconds(20), &ChangeRate, gateways, bottle_b2);
+  Simulator::Schedule (Seconds(35), &ChangeRate, gateways, bottle_b1);
 
   if (pcap)
     {
