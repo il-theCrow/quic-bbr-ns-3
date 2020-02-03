@@ -175,7 +175,7 @@ int main (int argc, char *argv[])
   std::string prefix_file_name = "QuicVariantsComparison";
   double data_mbytes = 0;
   uint32_t mtu_bytes = 1500;
-  uint16_t num_flows = 1;
+  uint16_t num_flows = 5;
   float duration = 100;
   uint32_t run = 0;
   bool flow_monitor = false;
@@ -382,13 +382,16 @@ int main (int argc, char *argv[])
 
   serverApps.Start (Seconds (start_time));
   clientApps.Stop (Seconds (stop_time));
-  clientApps.Start (Seconds (2));
+  for (uint16_t i = 0; i < sources.GetN (); i++)
+    {
+      clientApps.Get (i)->SetStartTime (Seconds (2 + 15 * i));
+    }
 
   for (uint16_t i = 0; i < num_flows; i++)
     {
       auto n2 = sinks.Get (i);
       auto n1 = sources.Get (i);
-      Time t = Seconds(2.100001);
+      Time t = Seconds(2.000001 + 15 * i);
       Simulator::Schedule (t, &Traces, n2->GetId(), 
             "./server", ".txt");
       Simulator::Schedule (t, &Traces, n1->GetId(), 

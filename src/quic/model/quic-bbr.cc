@@ -727,7 +727,9 @@ QuicBbr::OnAckReceived (Ptr<TcpSocketState> tcb, QuicSubheader &ack,
     }
 
   // Precess end of recovery
-  if (tcbd->m_endOfRecovery <= tcbd->m_largestAckedPacket)
+  if ((tcbd->m_congState == TcpSocketState::CA_RECOVERY or
+      tcbd->m_congState == TcpSocketState::CA_LOSS) and
+      tcbd->m_endOfRecovery <= tcbd->m_largestAckedPacket)
     {
       tcbd->m_congState = TcpSocketState::CA_OPEN;
       CongestionStateSet (tcb, TcpSocketState::CA_OPEN);

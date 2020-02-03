@@ -137,7 +137,7 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
   std::ostringstream fileName;
   fileName << pathVersion << "QUIC-rx-data" << serverId << "" << finalPart;
   std::ostringstream pathRx;
-  pathRx << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/*/QuicSocketBase/Rx";
+  pathRx << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/Rx";
   NS_LOG_INFO("Matches rx " << Config::LookupMatches(pathRx.str().c_str()).GetN());
 
   Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (fileName.str ().c_str ());
