@@ -826,6 +826,7 @@ QuicSocketTxBuffer::UpdateRateSample (QuicSocketTxItem *item)
 
   if (m_tcb == nullptr or item->m_deliveredTime == Time::Max ())
     {
+      // item already SACKed
       return;
     }
 
@@ -841,7 +842,10 @@ QuicSocketTxBuffer::UpdateRateSample (QuicSocketTxItem *item)
       m_rs.m_ackElapsed       = m_tcb->m_deliveredTime - item->m_deliveredTime;
       m_tcb->m_firstSentTime  = item->m_lastSent;
     }
-
+  
+  /* Mark the packet as delivered once it is SACKed to avoid
+   * being used again when it's cumulatively acked. 
+   */
   item->m_deliveredTime = Time::Max ();
   m_tcb->m_txItemDelivered = item->m_delivered;
 }

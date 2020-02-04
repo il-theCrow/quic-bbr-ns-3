@@ -198,7 +198,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("mtu", "Size of IP packets to send in bytes", mtu_bytes);
   cmd.AddValue ("num_flows", "Number of flows", num_flows);
   cmd.AddValue ("duration", "Time to allow flows to run in seconds", duration);
-  cmd.AddValue ("run", "Run index (for setting repeatable seeds)", run);
+  cmd.AddValue ("RngRun", "Run index (for setting repeatable seeds)", run);
   cmd.AddValue ("flow_monitor", "Enable flow monitor", flow_monitor);
   cmd.AddValue ("pcap_tracing", "Enable or disable PCAP tracing", pcap);
   cmd.AddValue ("queue_disc_type", "Queue disc type for gateway (e.g. ns3::CoDelQueueDisc)", queue_disc_type);
@@ -393,9 +393,9 @@ int main (int argc, char *argv[])
       auto n1 = sources.Get (i);
       Time t = Seconds(2.000001 + 15 * i);
       Simulator::Schedule (t, &Traces, n2->GetId(), 
-            "./server", ".txt");
+            "./server", ".data");
       Simulator::Schedule (t, &Traces, n1->GetId(), 
-            "./client", ".txt");
+            "./client", ".data");
     }
 
   if (pcap)

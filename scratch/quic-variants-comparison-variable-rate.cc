@@ -99,6 +99,13 @@ Rx (Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p, const QuicHeader& q, P
 }
 
 static void
+AppRx (Ptr<OutputStreamWrapper> stream, Ptr<const Packet> packet, const Address &address)
+{
+  NS_UNUSED (address);
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << packet->GetSize () << std::endl;
+}
+
+static void
 Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
 {
   AsciiTraceHelper asciiTraceHelper;
@@ -160,6 +167,44 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
 
 }
 
+static void
+TraceAppRx (ApplicationContainer serverApps, std::string pathVersion, std::string finalPart)
+{
+  AsciiTraceHelper asciiTraceHelper;
+  for (auto it = serverApps.Begin (); it != serverApps.End (); ++it)
+    {
+      Ptr<PacketSink> app = DynamicCast<PacketSink> (*it);
+      std::ostringstream file;
+      file << pathVersion << "-App-rx-data-" << app->GetNode ()->GetId () << finalPart;
+      Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (file.str ().c_str ());
+      app->TraceConnectWithoutContext ("Rx", MakeBoundCallback (&AppRx, stream));
+    }
+}
+
+static void
+BytesInQueueTrace (Ptr<OutputStreamWrapper> stream, uint32_t oldVal, uint32_t newVal)
+{
+  NS_UNUSED(oldVal);
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << newVal << std::endl;
+}
+
+static void
+TraceBottleneckQueue (NodeContainer gateways, std::string pathVersion, std::string finalPart)
+{
+  AsciiTraceHelper asciiTraceHelper;
+  for (auto it = gateways.Begin (); it != gateways.End (); ++it)
+    {
+      Ptr<Node> node = DynamicCast<Node> (*it);
+      std::ostringstream file;
+      file << pathVersion << "-Queue-size-" << node->GetId () << finalPart;
+      Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (file.str ().c_str ());
+
+      Ptr<Queue<Packet> > queue = StaticCast<PointToPointNetDevice> (node->GetDevice (2))->GetQueue ();
+
+      queue->TraceConnectWithoutContext ("BytesInQueue", MakeBoundCallback (&BytesInQueueTrace, stream));
+    }
+}
+
 /**
  * Changes the rate of the bottleneck link
  * \param gateways the nodes at the end of the bottleneck link
@@ -216,7 +261,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("mtu", "Size of IP packets to send in bytes", mtu_bytes);
   cmd.AddValue ("num_flows", "Number of flows", num_flows);
   cmd.AddValue ("duration", "Time to allow flows to run in seconds", duration);
-  cmd.AddValue ("run", "Run index (for setting repeatable seeds)", run);
+  cmd.AddValue ("RngRun", "Run index (for setting repeatable seeds)", run);
   cmd.AddValue ("flow_monitor", "Enable flow monitor", flow_monitor);
   cmd.AddValue ("pcap_tracing", "Enable or disable PCAP tracing", pcap);
   cmd.AddValue ("queue_disc_type", "Queue disc type for gateway (e.g. ns3::CoDelQueueDisc)", queue_disc_type);
@@ -404,6 +449,9 @@ int main (int argc, char *argv[])
   serverApps.Start (Seconds (start_time));
   clientApps.Stop (Seconds (stop_time));
   clientApps.Start (Seconds (2));
+
+  Simulator::Schedule (Seconds (start_time + 0.00001), &TraceAppRx, serverApps, "./server", ".data");
+  Simulator::Schedule (Seconds (start_time + 0.00001), &TraceBottleneckQueue, gateways, "./queue", ".data");
 
   for (uint16_t i = 0; i < num_flows; i++)
     {

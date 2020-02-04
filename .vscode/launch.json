@@ -27,7 +27,7 @@
             "name": "(CodeLLDB) Launch variants-comparison",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/build/scratch/quic-variants-comparison-bulksend", // Local path.
+            "program": "${workspaceFolder}/build/scratch/quic-variants-comparison-variable-rate", // Local path.
             "cwd": "${workspaceFolder}/results",
             "env": {
                 "DYLD_LIBRARY_PATH": "${workspaceFolder}/build/lib/"

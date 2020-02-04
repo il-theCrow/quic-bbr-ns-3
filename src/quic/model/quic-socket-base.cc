@@ -1557,7 +1557,7 @@ QuicSocketBase::ReTxTimeout ()
     {
       // Tail Loss Probe. Send one new data packet, do not retransmit - IETF Draft QUIC Recovery, Sec. 4.3.2
       SequenceNumber32 next = ++m_tcb->m_nextTxSequence;
-      NS_LOG_INFO ("TLP triggered");
+      NS_LOG_INFO ("TLP triggered sn: " << next);
       uint32_t s = std::min (ConnectionWindow (), GetSegSize ());
       
       // cancel pacing to send packet immediately
