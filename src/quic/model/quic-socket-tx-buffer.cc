@@ -882,10 +882,6 @@ QuicSocketTxBuffer::GenerateRateSample ()
 
   m_rs.m_delivered = m_tcb->m_delivered - m_rs.m_priorDelivered;
 
-  if (Simulator::Now().GetSeconds() > 32.18)
-  {
-    NS_LOG_UNCOND("now");
-  }
 
   if (m_rs.m_ackBytesSent < m_tcb->m_ackBytesSent - m_rs.m_priorAckBytesSent or ++m_rs.m_ackBytesMaxWin > 5) //quick maxfilter implementation
     {
