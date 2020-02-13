@@ -134,6 +134,12 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
   std::ostringstream fileBbrState;
   fileBbrState << pathVersion << "QUIC-BBR-state"  << serverId << "" << finalPart;
 
+  std::ostringstream pathInFlight;
+  pathInFlight << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/TCB/BytesInFlight";
+
+  std::ostringstream fileInFlight;
+  fileInFlight << pathVersion << "QUIC-InFlight"  << serverId << "" << finalPart;
+
   std::ostringstream fileName;
   fileName << pathVersion << "QUIC-rx-data" << serverId << "" << finalPart;
   std::ostringstream pathRx;
@@ -158,8 +164,34 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
   Ptr<OutputStreamWrapper> streamBbrState = asciiTraceHelper.CreateFileStream (fileBbrState.str ().c_str ());
   Config::ConnectWithoutContext (pathBbrState.str ().c_str (), MakeBoundCallback(&BbrStateChange, streamBbrState));
 
+  Ptr<OutputStreamWrapper> streamInFlight = asciiTraceHelper.CreateFileStream (fileInFlight.str ().c_str ());
+  Config::ConnectWithoutContext (pathInFlight.str ().c_str (), MakeBoundCallback (&CwndChange, streamInFlight));
+
 }
 
+static void
+BytesInQueueTrace (Ptr<OutputStreamWrapper> stream, uint32_t oldVal, uint32_t newVal)
+{
+  NS_UNUSED(oldVal);
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << newVal << std::endl;
+}
+
+static void
+TraceBottleneckQueue (NodeContainer gateways, std::string pathVersion, std::string finalPart)
+{
+  AsciiTraceHelper asciiTraceHelper;
+  for (auto it = gateways.Begin (); it != gateways.End (); ++it)
+    {
+      Ptr<Node> node = DynamicCast<Node> (*it);
+      std::ostringstream file;
+      file << pathVersion << "-Queue-size-" << node->GetId () << finalPart;
+      Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (file.str ().c_str ());
+
+      Ptr<Queue<Packet> > queue = StaticCast<PointToPointNetDevice> (node->GetDevice (2))->GetQueue ();
+
+      queue->TraceConnectWithoutContext ("BytesInQueue", MakeBoundCallback (&BytesInQueueTrace, stream));
+    }
+}
 
 
 int main (int argc, char *argv[])
@@ -175,8 +207,8 @@ int main (int argc, char *argv[])
   std::string prefix_file_name = "QuicVariantsComparison";
   double data_mbytes = 0;
   uint32_t mtu_bytes = 1500;
-  uint16_t num_flows = 5;
-  float duration = 100;
+  uint16_t num_flows = 2;
+  float duration = 60.0;
   uint32_t run = 0;
   bool flow_monitor = false;
   bool pcap = false;
@@ -386,6 +418,9 @@ int main (int argc, char *argv[])
     {
       clientApps.Get (i)->SetStartTime (Seconds (2 + 15 * i));
     }
+
+  Simulator::Schedule (Seconds (start_time + 0.00001), &TraceBottleneckQueue, gateways, "./queue", ".data");
+
 
   for (uint16_t i = 0; i < num_flows; i++)
     {

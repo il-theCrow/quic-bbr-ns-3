@@ -479,7 +479,7 @@ int main (int argc, char *argv[])
     }
 
   Simulator::Schedule (Seconds(20), &ChangeRate, gateways, bottle_b2);
-  Simulator::Schedule (Seconds(35), &ChangeRate, gateways, bottle_b1);
+  Simulator::Schedule (Seconds(40), &ChangeRate, gateways, bottle_b1);
 
   if (pcap)
     {
