@@ -122,6 +122,7 @@ public:
   uint32_t               m_txItemDelivered {0};              /**< amount of data (in bytes) delivered when last packet
                                                                   marked asdelivered was first sent */
   uint32_t               m_lastAckedSackedBytes {0};         //!< Size of data sacked in the last ack
+  uint32_t               m_ackBytesSent {0};
 
 };
 

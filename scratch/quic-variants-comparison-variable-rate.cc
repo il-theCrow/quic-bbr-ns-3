@@ -141,6 +141,12 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
   std::ostringstream fileBbrState;
   fileBbrState << pathVersion << "QUIC-BBR-state"  << serverId << "" << finalPart;
 
+  std::ostringstream pathInFlight;
+  pathInFlight << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/TCB/BytesInFlight";
+
+  std::ostringstream fileInFlight;
+  fileInFlight << pathVersion << "QUIC-InFlight"  << serverId << "" << finalPart;
+
   std::ostringstream fileName;
   fileName << pathVersion << "QUIC-rx-data" << serverId << "" << finalPart;
   std::ostringstream pathRx;
@@ -164,6 +170,9 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
 
   Ptr<OutputStreamWrapper> streamBbrState = asciiTraceHelper.CreateFileStream (fileBbrState.str ().c_str ());
   Config::ConnectWithoutContext (pathBbrState.str ().c_str (), MakeBoundCallback(&BbrStateChange, streamBbrState));
+
+  Ptr<OutputStreamWrapper> streamInFlight = asciiTraceHelper.CreateFileStream (fileInFlight.str ().c_str ());
+  Config::ConnectWithoutContext (pathInFlight.str ().c_str (), MakeBoundCallback (&CwndChange, streamInFlight));
 
 }
 

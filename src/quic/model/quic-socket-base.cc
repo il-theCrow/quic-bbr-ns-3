@@ -302,6 +302,11 @@ QuicSocketBase::GetTypeId (void)
                    PointerValue (),
                    MakePointerAccessor (&QuicSocketBase::m_congestionControl),
                    MakePointerChecker<QuicCongestionOps> ())
+    .AddAttribute ("TCB",
+                   "The connection's QuicSocketState",
+                   PointerValue (),
+                   MakePointerAccessor (&QuicSocketBase::m_tcb),
+                   MakePointerChecker<QuicSocketState> ())
     .AddTraceSource ("CurrentPacingRate",
                      "The current pacing rate, if pacing enabled",
                      MakeTraceSourceAccessor (&QuicSocketBase::m_currentPacingRateTrace),
@@ -1237,6 +1242,8 @@ QuicSocketBase::SendAck ()
 
   head = QuicHeader::CreateShort (m_connectionId, packetNumber,
                                   !m_omit_connection_id, m_keyPhase);
+
+  m_txBuffer->UpdateAckSent (packetNumber, p->GetSerializedSize () + head.GetSerializedSize ());
 
   // if (m_socketState == CONNECTING_SVR)
   //   {
