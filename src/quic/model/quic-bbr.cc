@@ -559,6 +559,7 @@ QuicBbr::WhichState (BbrMode_t mode) const
       return "BBR_PROBE_RTT";
     }
   NS_ASSERT (false);
+  return ""; //required for Werror
 }
 
 void
