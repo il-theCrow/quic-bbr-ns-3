@@ -25,6 +25,22 @@
             "MIMode": "lldb"
         },
         {
+            "name": "(CodeLLDB) Launch variants-comparison",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/scratch/tcp-variants-comparison", // Local path.
+            "cwd": "${workspaceFolder}/results",
+            "env": {
+                "DYLD_LIBRARY_PATH": "${workspaceFolder}/build/lib/"
+            },
+            "stdio": [
+                null,
+                "${workspaceFolder}/results/stdout",
+                "${workspaceFolder}/results/stderr"
+            ],
+            "preLaunchTask": "Build",
+        },
+        {
             "name": "(gdb) Launch from scratch",
             "type": "cppdbg",
             "request": "launch",

@@ -53,7 +53,7 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE ("TcpVariantsComparison");
+NS_LOG_COMPONENT_DEFINE ("TcpVariantsComparisonVariableRate");
 
 static bool firstCwnd = true;
 static bool firstSshThr = true;
@@ -154,7 +154,7 @@ TraceCwnd (std::string cwnd_tr_file_name)
 {
   AsciiTraceHelper ascii;
   cWndStream = ascii.CreateFileStream (cwnd_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&CwndTracer));
+  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&CwndTracer));
 }
 
 static void
@@ -162,7 +162,7 @@ TraceSsThresh (std::string ssthresh_tr_file_name)
 {
   AsciiTraceHelper ascii;
   ssThreshStream = ascii.CreateFileStream (ssthresh_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/SlowStartThreshold", MakeCallback (&SsThreshTracer));
+  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/SlowStartThreshold", MakeCallback (&SsThreshTracer));
 }
 
 static void
@@ -170,7 +170,7 @@ TraceRtt (std::string rtt_tr_file_name)
 {
   AsciiTraceHelper ascii;
   rttStream = ascii.CreateFileStream (rtt_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/RTT", MakeCallback (&RttTracer));
+  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/RTT", MakeCallback (&RttTracer));
 }
 
 static void
@@ -178,7 +178,7 @@ TraceRto (std::string rto_tr_file_name)
 {
   AsciiTraceHelper ascii;
   rtoStream = ascii.CreateFileStream (rto_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/RTO", MakeCallback (&RtoTracer));
+  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/RTO", MakeCallback (&RtoTracer));
 }
 
 static void
@@ -186,7 +186,7 @@ TraceNextTx (std::string &next_tx_seq_file_name)
 {
   AsciiTraceHelper ascii;
   nextTxStream = ascii.CreateFileStream (next_tx_seq_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/NextTxSequence", MakeCallback (&NextTxTracer));
+  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/NextTxSequence", MakeCallback (&NextTxTracer));
 }
 
 static void
@@ -194,7 +194,7 @@ TraceInFlight (std::string &in_flight_file_name)
 {
   AsciiTraceHelper ascii;
   inFlightStream = ascii.CreateFileStream (in_flight_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/BytesInFlight", MakeCallback (&InFlightTracer));
+  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/BytesInFlight", MakeCallback (&InFlightTracer));
 }
 
 
@@ -203,7 +203,7 @@ TraceNextRx (std::string &next_rx_seq_file_name)
 {
   AsciiTraceHelper ascii;
   nextRxStream = ascii.CreateFileStream (next_rx_seq_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/1/RxBuffer/NextRxSequence", MakeCallback (&NextRxTracer));
+  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/1/RxBuffer/NextRxSequence", MakeCallback (&NextRxTracer));
 }
 
 // add tracer for bbr state
@@ -218,7 +218,7 @@ TraceBbrState (std::string &bbr_state_file_name)
 {
   AsciiTraceHelper ascii;
   bbrStateStream = ascii.CreateFileStream (bbr_state_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/CongControl/BbrState",
+  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/CongControl/BbrState",
                                  MakeCallback (&BbrStateTracer));
 }
 
@@ -234,49 +234,37 @@ TracePacingRate (std::string &pacing_rate_file_name)
 {
   AsciiTraceHelper ascii;
   pacingRateStream = ascii.CreateFileStream (pacing_rate_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/CurrentPacingRate",
+  Config::ConnectWithoutContext ("/NodeList/1/$ns3::TcpL4Protocol/SocketList/0/CurrentPacingRate",
                                  MakeCallback (&PacingRateTracer));
 }
 
-
 static void
-BytesInQueueTracer (Ptr<OutputStreamWrapper> stream, uint32_t oldVal, uint32_t newVal)
+ChangeRate (NodeContainer gateways, DataRate newRate)
 {
-  NS_UNUSED(oldVal);
-  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << newVal << std::endl;
-}
-
-static void
-TraceBottleneckQueue (NodeContainer gateways, std::string pathVersion, std::string finalPart)
-{
-  AsciiTraceHelper asciiTraceHelper;
-  for (auto it = gateways.Begin (); it != gateways.End (); ++it)
+  for (auto it = gateways.Begin(); it != gateways.End(); ++it)
     {
-      Ptr<Node> node = DynamicCast<Node> (*it);
-      std::ostringstream file;
-      file << pathVersion << "-Queue-size-" << node->GetId () << finalPart;
-      Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (file.str ().c_str ());
-
-      Ptr<Queue<Packet> > queue = StaticCast<PointToPointNetDevice> (node->GetDevice (2))->GetQueue ();
-
-      queue->TraceConnectWithoutContext ("BytesInQueue", MakeBoundCallback (&BytesInQueueTracer, stream));
+      uint32_t id = (*it)->GetId ();
+      std::ostringstream path;
+      path << "/NodeList/" << id << "/DeviceList/2/$ns3::PointToPointNetDevice/DataRate";
+      Config::Set (path.str ().c_str (), DataRateValue (newRate));
     }
+  NS_LOG_INFO ("BtlBw changed to " << newRate);
 }
-
 
 int main (int argc, char *argv[])
 {
   std::string transport_prot = "TcpBbr";
   bool pacing = true;
   double error_p = 0.0;
-  std::string bandwidth = "2Mbps";
+  std::string bandwidth1 = "2Mbps";
+  std::string bandwidth2 = "4Mbps";
   std::string delay = "0.01ms";
   std::string access_bandwidth = "10Mbps";
   std::string access_delay = "45ms";
   bool tracing = true;
   std::string prefix_file_name = "TcpVariantsComparison";
   uint64_t data_mbytes = 0;
-  uint32_t mtu_bytes = 1500;
+  uint32_t mtu_bytes = 1400;
   uint16_t num_flows = 1;
   double duration = 60.0;
   uint32_t run = 0;
@@ -294,7 +282,8 @@ int main (int argc, char *argv[])
 		"TcpLp", transport_prot);
   cmd.AddValue ("pacing", "Enable TCP Pacing", pacing);
   cmd.AddValue ("error_p", "Packet error rate", error_p);
-  cmd.AddValue ("bandwidth", "Bottleneck bandwidth", bandwidth);
+  cmd.AddValue ("bandwidth1", "Bottleneck bandwidth", bandwidth1);
+  cmd.AddValue ("bandwidth2", "Bottleneck bandwidth", bandwidth2);
   cmd.AddValue ("delay", "Bottleneck delay", delay);
   cmd.AddValue ("access_bandwidth", "Access link bandwidth", access_bandwidth);
   cmd.AddValue ("access_delay", "Access link delay", access_delay);
@@ -367,12 +356,12 @@ int main (int argc, char *argv[])
     }
 
   // Create gateways, sources, and sinks
+  NodeContainer gateways;
+  gateways.Create (1);
   NodeContainer sources;
   sources.Create (num_flows);
   NodeContainer sinks;
   sinks.Create (num_flows);
-  NodeContainer gateways;
-  gateways.Create (2);
 
   // Configure the error model
   // Here we use RateErrorModel with packet error rate
@@ -383,14 +372,11 @@ int main (int argc, char *argv[])
   error_model.SetUnit (RateErrorModel::ERROR_UNIT_PACKET);
   error_model.SetRate (error_p);
 
-  PointToPointHelper BottleneckLink;
-  BottleneckLink.SetDeviceAttribute ("DataRate", StringValue (bandwidth));
-  BottleneckLink.SetChannelAttribute ("Delay", StringValue (delay));
-  BottleneckLink.SetDeviceAttribute ("ReceiveErrorModel", PointerValue (&error_model));
+  PointToPointHelper UnReLink;
+  UnReLink.SetDeviceAttribute ("DataRate", StringValue (bandwidth1));
+  UnReLink.SetChannelAttribute ("Delay", StringValue (delay));
+  UnReLink.SetDeviceAttribute ("ReceiveErrorModel", PointerValue (&error_model));
 
-  PointToPointHelper AccessLink;
-  AccessLink.SetDeviceAttribute ("DataRate", StringValue (access_bandwidth));
-  AccessLink.SetChannelAttribute ("Delay", StringValue (access_delay));
 
   InternetStackHelper stack;
   stack.InstallAll ();
@@ -413,11 +399,12 @@ int main (int argc, char *argv[])
   Ipv4InterfaceContainer sink_interfaces;
 
   DataRate access_b (access_bandwidth);
-  DataRate bottle_b (bandwidth);
+  DataRate bottle_b1 (bandwidth1);
+  DataRate bottle_b2 (bandwidth2);
   Time access_d (access_delay);
   Time bottle_d (delay);
 
-  uint32_t size = static_cast<uint32_t>((std::min (access_b, bottle_b).GetBitRate () / 8) *
+  uint32_t size = static_cast<uint32_t>((std::min (access_b, std::max (bottle_b1, bottle_b2)).GetBitRate () / 8) *
     ((access_d + bottle_d) * 2).GetSeconds ());
 
   Config::SetDefault ("ns3::PfifoFastQueueDisc::MaxSize",
@@ -425,18 +412,15 @@ int main (int argc, char *argv[])
   Config::SetDefault ("ns3::CoDelQueueDisc::MaxSize",
                       QueueSizeValue (QueueSize (QueueSizeUnit::BYTES, size)));
 
-  NetDeviceContainer devices;
-  Ipv4InterfaceContainer interfaces;
   for (uint32_t i = 0; i < num_flows; i++)
     {
-      // sources local link
+      NetDeviceContainer devices;
       devices = LocalLink.Install (sources.Get (i), gateways.Get (0));
       tchPfifo.Install (devices);
       address.NewNetwork ();
-      interfaces = address.Assign (devices);
+      Ipv4InterfaceContainer interfaces = address.Assign (devices);
 
-      //sinks local link
-      devices = LocalLink.Install (gateways.Get (1), sinks.Get (i));
+      devices = UnReLink.Install (gateways.Get (0), sinks.Get (i));
       if (queue_disc_type.compare ("ns3::PfifoFastQueueDisc") == 0)
         {
           tchPfifo.Install (devices);
@@ -453,23 +437,6 @@ int main (int argc, char *argv[])
       interfaces = address.Assign (devices);
       sink_interfaces.Add (interfaces.Get (1));
     }
-  
-  // the bottleneck
-  devices = BottleneckLink.Install (gateways.Get (0), gateways.Get (1));
-  if (queue_disc_type.compare ("ns3::PfifoFastQueueDisc") == 0)
-    {
-      tchPfifo.Install (devices);
-    }
-  else if (queue_disc_type.compare ("ns3::CoDelQueueDisc") == 0)
-    {
-      tchCoDel.Install (devices);
-    }
-  else
-    {
-      NS_FATAL_ERROR ("Queue not recognized. Allowed values are ns3::CoDelQueueDisc or ns3::PfifoFastQueueDisc");
-    }
-  address.NewNetwork ();
-  interfaces = address.Assign (devices);
 
   NS_LOG_INFO ("Initialize Global Routing.");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
@@ -516,13 +483,14 @@ int main (int argc, char *argv[])
       Simulator::Schedule (Seconds (0.1), &TraceNextRx, prefix_file_name + "-next-rx.data");
       Simulator::Schedule (Seconds (0.00001), &TraceBbrState, prefix_file_name + "-bbr-state.data");
       Simulator::Schedule (Seconds (0.00001), &TracePacingRate, prefix_file_name + "-pacing-rate.data");
-      Simulator::Schedule (Seconds (0.00001), &TraceBottleneckQueue, gateways, "./queue", ".data");
-
     }
+
+  Simulator::Schedule (Seconds (20), &ChangeRate, gateways, bottle_b2);
+  Simulator::Schedule (Seconds (40), &ChangeRate, gateways, bottle_b1);
 
   if (pcap)
     {
-      BottleneckLink.EnablePcapAll (prefix_file_name, true);
+      UnReLink.EnablePcapAll (prefix_file_name, true);
       LocalLink.EnablePcapAll (prefix_file_name, true);
     }
 
