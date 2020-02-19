@@ -66,11 +66,11 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("QuicVariantsComparisonBulkSend");
 
 // connect to a number of traces
-// static void
-// CwndChange (Ptr<OutputStreamWrapper> stream, uint32_t oldCwnd, uint32_t newCwnd)
-// {
-//   *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldCwnd << "\t" << newCwnd << std::endl;
-// }
+static void
+CwndChange (Ptr<OutputStreamWrapper> stream, uint32_t oldCwnd, uint32_t newCwnd)
+{
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldCwnd << "\t" << newCwnd << std::endl;
+}
 
 static void
 RttChange (Ptr<OutputStreamWrapper> stream, Time oldRtt, Time newRtt)
@@ -78,37 +78,37 @@ RttChange (Ptr<OutputStreamWrapper> stream, Time oldRtt, Time newRtt)
   *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldRtt.GetSeconds () << "\t" << newRtt.GetSeconds () << std::endl;
 }
 
-// static void
-// BbrStateChange (Ptr<OutputStreamWrapper> stream, QuicBbr::BbrMode_t oldState, QuicBbr::BbrMode_t newState)
-// {
-//   *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldState
-//                         << "\t" << newState << std::endl;
-// }
+static void
+BbrStateChange (Ptr<OutputStreamWrapper> stream, QuicBbr::BbrMode_t oldState, QuicBbr::BbrMode_t newState)
+{
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldState
+                        << "\t" << newState << std::endl;
+}
 
-// static void
-// PacingRateChange (Ptr<OutputStreamWrapper> stream, DataRate oldRate, DataRate newRate)
-// {
-//   *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldRate.GetBitRate ()
-//                         << "\t" << newRate.GetBitRate () << std::endl;
-// }
+static void
+PacingRateChange (Ptr<OutputStreamWrapper> stream, DataRate oldRate, DataRate newRate)
+{
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << oldRate.GetBitRate ()
+                        << "\t" << newRate.GetBitRate () << std::endl;
+}
 
-// static void
-// Rx (Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p, const QuicHeader& q, Ptr<const QuicSocketBase> qsb)
-// {
-//   *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << p->GetSize() << std::endl;
-// }
+static void
+Rx (Ptr<OutputStreamWrapper> stream, Ptr<const Packet> p, const QuicHeader& q, Ptr<const QuicSocketBase> qsb)
+{
+  *stream->GetStream () << Simulator::Now ().GetSeconds () << "\t" << p->GetSize() << std::endl;
+}
 
 static void
 Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
 {
   AsciiTraceHelper asciiTraceHelper;
 
-  // std::ostringstream pathCW;
-  // pathCW << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/CongestionWindow";
-  // NS_LOG_INFO("Matches cw " << Config::LookupMatches(pathCW.str().c_str()).GetN());
+  std::ostringstream pathCW;
+  pathCW << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/CongestionWindow";
+  NS_LOG_INFO("Matches cw " << Config::LookupMatches(pathCW.str().c_str()).GetN());
 
-  // std::ostringstream fileCW;
-  // fileCW << pathVersion << "QUIC-cwnd-change"  << serverId << "" << finalPart;
+  std::ostringstream fileCW;
+  fileCW << pathVersion << "QUIC-cwnd-change"  << serverId << "" << finalPart;
 
   std::ostringstream pathRTT;
   pathRTT << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/RTT";
@@ -116,56 +116,56 @@ Traces(uint32_t serverId, std::string pathVersion, std::string finalPart)
   std::ostringstream fileRTT;
   fileRTT << pathVersion << "QUIC-rtt"  << serverId << "" << finalPart;
 
-  // std::ostringstream pathRCWnd;
-  // pathRCWnd<< "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/RWND";
+  std::ostringstream pathRCWnd;
+  pathRCWnd<< "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/RWND";
 
-  // std::ostringstream fileRCWnd;
-  // fileRCWnd<<pathVersion << "QUIC-rwnd-change"  << serverId << "" << finalPart;
+  std::ostringstream fileRCWnd;
+  fileRCWnd<<pathVersion << "QUIC-rwnd-change"  << serverId << "" << finalPart;
 
-  // std::ostringstream pathPacing;
-  // pathPacing << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/CurrentPacingRate";
+  std::ostringstream pathPacing;
+  pathPacing << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/CurrentPacingRate";
 
-  // std::ostringstream filePacing;
-  // filePacing << pathVersion << "QUIC-pacing-rate"  << serverId << "" << finalPart;
+  std::ostringstream filePacing;
+  filePacing << pathVersion << "QUIC-pacing-rate"  << serverId << "" << finalPart;
 
-  // std::ostringstream pathBbrState;
-  // pathBbrState << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/CongControl/BbrState";
+  std::ostringstream pathBbrState;
+  pathBbrState << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/CongControl/BbrState";
 
-  // std::ostringstream fileBbrState;
-  // fileBbrState << pathVersion << "QUIC-BBR-state"  << serverId << "" << finalPart;
+  std::ostringstream fileBbrState;
+  fileBbrState << pathVersion << "QUIC-BBR-state"  << serverId << "" << finalPart;
 
-  // std::ostringstream pathInFlight;
-  // pathInFlight << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/TCB/BytesInFlight";
+  std::ostringstream pathInFlight;
+  pathInFlight << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/0/QuicSocketBase/TCB/BytesInFlight";
 
-  // std::ostringstream fileInFlight;
-  // fileInFlight << pathVersion << "QUIC-InFlight"  << serverId << "" << finalPart;
+  std::ostringstream fileInFlight;
+  fileInFlight << pathVersion << "QUIC-InFlight"  << serverId << "" << finalPart;
 
-  // std::ostringstream fileName;
-  // fileName << pathVersion << "QUIC-rx-data" << serverId << "" << finalPart;
-  // std::ostringstream pathRx;
-  // pathRx << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/*/QuicSocketBase/Rx";
-  // NS_LOG_INFO("Matches rx " << Config::LookupMatches(pathRx.str().c_str()).GetN());
+  std::ostringstream fileName;
+  fileName << pathVersion << "QUIC-rx-data" << serverId << "" << finalPart;
+  std::ostringstream pathRx;
+  pathRx << "/NodeList/" << serverId << "/$ns3::QuicL4Protocol/SocketList/*/QuicSocketBase/Rx";
+  NS_LOG_INFO("Matches rx " << Config::LookupMatches(pathRx.str().c_str()).GetN());
 
-  // Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (fileName.str ().c_str ());
-  // Config::ConnectWithoutContext (pathRx.str ().c_str (), MakeBoundCallback (&Rx, stream));
+  Ptr<OutputStreamWrapper> stream = asciiTraceHelper.CreateFileStream (fileName.str ().c_str ());
+  Config::ConnectWithoutContext (pathRx.str ().c_str (), MakeBoundCallback (&Rx, stream));
 
-  // Ptr<OutputStreamWrapper> stream1 = asciiTraceHelper.CreateFileStream (fileCW.str ().c_str ());
-  // Config::ConnectWithoutContext (pathCW.str ().c_str (), MakeBoundCallback(&CwndChange, stream1));
+  Ptr<OutputStreamWrapper> stream1 = asciiTraceHelper.CreateFileStream (fileCW.str ().c_str ());
+  Config::ConnectWithoutContext (pathCW.str ().c_str (), MakeBoundCallback(&CwndChange, stream1));
 
   Ptr<OutputStreamWrapper> stream2 = asciiTraceHelper.CreateFileStream (fileRTT.str ().c_str ());
   Config::ConnectWithoutContext (pathRTT.str ().c_str (), MakeBoundCallback(&RttChange, stream2));
 
-  // Ptr<OutputStreamWrapper> stream4 = asciiTraceHelper.CreateFileStream (fileRCWnd.str ().c_str ());
-  // Config::ConnectWithoutContext (pathRCWnd.str ().c_str (), MakeBoundCallback(&CwndChange, stream4));
+  Ptr<OutputStreamWrapper> stream4 = asciiTraceHelper.CreateFileStream (fileRCWnd.str ().c_str ());
+  Config::ConnectWithoutContext (pathRCWnd.str ().c_str (), MakeBoundCallback(&CwndChange, stream4));
 
-  // Ptr<OutputStreamWrapper> streamPacing = asciiTraceHelper.CreateFileStream (filePacing.str ().c_str ());
-  // Config::ConnectWithoutContext (pathPacing.str ().c_str (), MakeBoundCallback(&PacingRateChange, streamPacing));
+  Ptr<OutputStreamWrapper> streamPacing = asciiTraceHelper.CreateFileStream (filePacing.str ().c_str ());
+  Config::ConnectWithoutContext (pathPacing.str ().c_str (), MakeBoundCallback(&PacingRateChange, streamPacing));
 
-  // Ptr<OutputStreamWrapper> streamBbrState = asciiTraceHelper.CreateFileStream (fileBbrState.str ().c_str ());
-  // Config::ConnectWithoutContext (pathBbrState.str ().c_str (), MakeBoundCallback(&BbrStateChange, streamBbrState));
+  Ptr<OutputStreamWrapper> streamBbrState = asciiTraceHelper.CreateFileStream (fileBbrState.str ().c_str ());
+  Config::ConnectWithoutContext (pathBbrState.str ().c_str (), MakeBoundCallback(&BbrStateChange, streamBbrState));
 
-  // Ptr<OutputStreamWrapper> streamInFlight = asciiTraceHelper.CreateFileStream (fileInFlight.str ().c_str ());
-  // Config::ConnectWithoutContext (pathInFlight.str ().c_str (), MakeBoundCallback (&CwndChange, streamInFlight));
+  Ptr<OutputStreamWrapper> streamInFlight = asciiTraceHelper.CreateFileStream (fileInFlight.str ().c_str ());
+  Config::ConnectWithoutContext (pathInFlight.str ().c_str (), MakeBoundCallback (&CwndChange, streamInFlight));
 
 }
 

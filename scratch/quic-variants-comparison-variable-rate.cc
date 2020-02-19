@@ -392,13 +392,15 @@ int main (int argc, char *argv[])
   Config::SetDefault ("ns3::QuicSocketBase::MaxPacketSize", UintegerValue (mtu_bytes - 60));
   // Config::SetDefault ("ns3::TcpSocketBase::MaxPacketSize", UintegerValue (mtu_bytes - 60));
 
+  NetDeviceContainer devices;
+  Ipv4InterfaceContainer interfaces;
+
   for (int i = 0; i < num_flows; i++)
     {
-      NetDeviceContainer devices;
       devices = AccessLink.Install (sources.Get (i), gateways.Get (0));
       tchPfifo.Install (devices);
       address.NewNetwork ();
-      Ipv4InterfaceContainer interfaces = address.Assign (devices);
+      interfaces = address.Assign (devices);
 
       devices = LocalLink.Install (gateways.Get (1), sinks.Get (i));
       if (queue_disc_type.compare ("ns3::PfifoFastQueueDisc") == 0)
@@ -417,22 +419,23 @@ int main (int argc, char *argv[])
       interfaces = address.Assign (devices);
       sink_interfaces.Add (interfaces.Get (1));
       
-      devices = BottleneckLink.Install (gateways.Get (0), gateways.Get (1));
-      if (queue_disc_type.compare ("ns3::PfifoFastQueueDisc") == 0)
-        {
-          tchPfifo.Install (devices);
-        }
-      else if (queue_disc_type.compare ("ns3::CoDelQueueDisc") == 0)
-        {
-          tchCoDel.Install (devices);
-        }
-      else
-        {
-          NS_FATAL_ERROR ("Queue not recognized. Allowed values are ns3::CoDelQueueDisc or ns3::PfifoFastQueueDisc");
-        }
-      address.NewNetwork ();
-      interfaces = address.Assign (devices);
     }
+  // bottleneck link
+  devices = BottleneckLink.Install (gateways.Get (0), gateways.Get (1));
+  if (queue_disc_type.compare ("ns3::PfifoFastQueueDisc") == 0)
+    {
+      tchPfifo.Install (devices);
+    }
+  else if (queue_disc_type.compare ("ns3::CoDelQueueDisc") == 0)
+    {
+      tchCoDel.Install (devices);
+    }
+  else
+    {
+      NS_FATAL_ERROR ("Queue not recognized. Allowed values are ns3::CoDelQueueDisc or ns3::PfifoFastQueueDisc");
+    }
+  address.NewNetwork ();
+  interfaces = address.Assign (devices);
 
   NS_LOG_INFO ("Initialize Global Routing.");
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
