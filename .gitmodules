@@ -1,0 +1,4 @@
+[submodule "src/quic"]
+	path = src/quic
+	url = git@github.com:il-theCrow/quic-bbr.git
+	branch = feature/quic-bbr-tracing
