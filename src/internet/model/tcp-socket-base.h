@@ -32,6 +32,7 @@
 #include "ns3/data-rate.h"
 #include "ns3/node.h"
 #include "ns3/tcp-socket-state.h"
+#include "ns3/tcp-tx-buffer.h"
 
 namespace ns3 {
 
